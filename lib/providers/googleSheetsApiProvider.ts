@@ -82,7 +82,10 @@ export class GoogleSheetsApiProvider implements LookupProvider {
   constructor(
     private simpleOptions?: SimpleSheetLoadOptions,
     private tokenSource: GoogleAccessTokenSource = browserTokenSource,
-    private fetchImpl: FetchLike = fetch
+    // Do not store window.fetch directly and later call it as `this.fetchImpl(...)`.
+    // Chrome's Window.fetch is brand-checked and throws "Illegal invocation" when
+    // invoked with the provider instance as `this`.
+    private fetchImpl: FetchLike = (input, init) => fetch(input, init)
   ) {}
 
   async inspect(spreadsheetUrl: string): Promise<SpreadsheetInspection> {
