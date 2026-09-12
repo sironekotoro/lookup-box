@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { LookupList, SheetInspection, SpreadsheetInspection } from '../../lib/types';
+import type { LookupList, SpreadsheetInspection } from '../../lib/types';
 import {
   applyLookupListDisplayNames,
   createLookupList,
@@ -14,11 +14,27 @@ import {
   saveSettings,
   type LookupSettings
 } from '../../lib/storage';
-import { GoogleSheetsProvider } from '../../lib/providers/googleSheetsProvider';
+import {
+  clearGoogleAuth,
+  getGoogleAccessToken,
+  getGoogleAuthRuntimeInfo,
+  isGoogleOAuthConfigured
+} from '../../lib/auth/googleAuth';
+import {
+  effectiveGoogleConnectionMode,
+  listLoadOptions,
+  makeGoogleSourceProvider
+} from '../../lib/providers/googleSource';
 import { MockProvider } from '../../lib/providers/mockProvider';
 
 function initialSettings(): LookupSettings {
   return { lists: [] };
+}
+
+function sheetLabel(sheet: SpreadsheetInspection['sheets'][number]): string {
+  return typeof sheet.rowCount === 'number'
+    ? `${sheet.name} (${sheet.rowCount}件)`
+    : sheet.name;
 }
 
 function App() {
@@ -30,6 +46,7 @@ function App() {
   const [valueColumn, setValueColumn] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const authInfo = getGoogleAuthRuntimeInfo();
 
   useEffect(() => {
     loadSettings().then((loaded) => {
@@ -43,6 +60,8 @@ function App() {
     [inspection, sheetName]
   );
 
+  const mode = effectiveGoogleConnectionMode(settings);
+
   function chooseSheet(nextSheetName: string, currentInspection = inspection) {
     setSheetName(nextSheetName);
     const sheet = currentInspection?.sheets.find((candidate) => candidate.name === nextSheetName);
@@ -51,9 +70,50 @@ function App() {
     setValueColumn(headers[1] ?? headers[0] ?? '');
   }
 
-  async function persistConnection() {
-    await saveSettings(settings);
-    setMessage('✓ 接続設定を保存しました。');
+  async function connectGoogle() {
+    if (!isGoogleOAuthConfigured()) {
+      setMessage('このビルドにはGoogle OAuth Client IDがまだ設定されていません。開発用設定を完了後に再ビルドしてください。');
+      return;
+    }
+
+    setBusy(true);
+    setMessage('Googleに接続しています...');
+    try {
+      await getGoogleAccessToken(true);
+      const next: LookupSettings = { ...settings, connectionMode: 'oauth', useMock: false };
+      await saveSettings(next);
+      setSettings(next);
+      setMessage('✓ Googleに接続しました。GAS URLやAPI Tokenは通常不要です。');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function disconnectGoogle() {
+    setBusy(true);
+    try {
+      await clearGoogleAuth();
+      const fallback = settings.gasUrl && settings.apiToken ? 'gas' as const : undefined;
+      const next: LookupSettings = { ...settings, connectionMode: fallback };
+      await saveSettings(next);
+      setSettings(next);
+      setMessage('Google接続を解除しました。');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function persistGasConnection() {
+    if (!settings.gasUrl || !settings.apiToken) {
+      setMessage('GAS URLとAPI Tokenを入力してください。');
+      return;
+    }
+    const next: LookupSettings = { ...settings, connectionMode: 'gas', useMock: false };
+    await saveSettings(next);
+    setSettings(next);
+    setMessage('✓ 従来のGAS接続を保存しました。');
   }
 
   async function useDemo() {
@@ -74,7 +134,7 @@ function App() {
     setBusy(true);
     setMessage('Google Sheetを確認しています...');
     try {
-      const provider = new GoogleSheetsProvider(settings.gasUrl ?? '', settings.apiToken ?? '');
+      const provider = makeGoogleSourceProvider(settings);
       const result = await provider.inspect(draftUrl);
       if (result.sheets.length === 0) throw new Error('検索できる表示タブが見つかりませんでした。');
 
@@ -91,17 +151,7 @@ function App() {
   }
 
   async function loadListBundle(list: LookupList, lists: LookupList[]) {
-    const provider = new GoogleSheetsProvider(
-      settings.gasUrl ?? '',
-      settings.apiToken ?? '',
-      {
-        spreadsheetUrl: list.spreadsheetUrl,
-        sheetName: list.sheetName,
-        searchColumns: [list.keyColumn, list.valueColumn],
-        displayColumns: [list.keyColumn, list.valueColumn],
-        copyColumns: [list.keyColumn, list.valueColumn]
-      }
-    );
+    const provider = makeGoogleSourceProvider(settings, listLoadOptions(list));
     const bundles = await provider.load();
     const source = bundles[0];
     if (!source) throw new Error(`${getLookupListDisplayName(list, lists)} を読み込めませんでした。`);
@@ -185,13 +235,39 @@ function App() {
   return (
     <main style={{maxWidth:760, margin:'30px auto', fontFamily:'system-ui', lineHeight:1.55, padding:'0 18px'}}>
       <h1>LookupBox 設定</h1>
-      <p>Google Sheetを複数登録できます。リスト名は入力不要で、Spreadsheet名から自動で決まります。</p>
+      <p>Googleに接続すれば、GAS URLやAPI Tokenを手入力せずにGoogle Sheetを登録できます。</p>
 
-      <details>
-        <summary>接続設定（GAS版では初回だけ）</summary>
+      <section style={{border:'1px solid #ddd', borderRadius:10, padding:16, marginBottom:22}}>
+        <h2 style={{marginTop:0}}>Google接続</h2>
+        <p>
+          現在: <strong>{mode === 'oauth' ? 'Google OAuth' : mode === 'gas' ? '従来のGAS接続' : settings.useMock ? 'デモ' : '未接続'}</strong>
+        </p>
+        {authInfo.configured ? (
+          <div>
+            <button disabled={busy} onClick={connectGoogle}>Googleに接続</button>{' '}
+            {mode === 'oauth' && <button disabled={busy} onClick={disconnectGoogle}>接続解除</button>}
+          </div>
+        ) : (
+          <p style={{color:'#8a5a00'}}>
+            このビルドはOAuth開発設定前です。OAuth Client IDを設定したビルドでは、ここに「Googleに接続」が有効になります。
+          </p>
+        )}
+        <details style={{marginTop:12}}>
+          <summary>開発情報</summary>
+          <div style={{fontSize:13, color:'#666', wordBreak:'break-all'}}>
+            <div>browser: {authInfo.browser}</div>
+            <div>extension id: {authInfo.extensionId ?? '-'}</div>
+            <div>redirect URL: {authInfo.redirectUrl ?? '-'}</div>
+          </div>
+        </details>
+      </section>
+
+      <details style={{marginBottom:24}}>
+        <summary>従来のGAS接続（移行・復旧用）</summary>
+        <p style={{color:'#666'}}>通常利用では不要です。既存環境を残したい場合だけ使用します。</p>
         <p><label>GAS Web App URL<br/><input style={{width:'100%'}} value={settings.gasUrl ?? ''} onChange={(e)=>setSettings({...settings,gasUrl:e.target.value})}/></label></p>
         <p><label>API Token<br/><input type="password" style={{width:'100%'}} value={settings.apiToken ?? ''} onChange={(e)=>setSettings({...settings,apiToken:e.target.value})}/></label></p>
-        <button disabled={busy} onClick={persistConnection}>接続設定を保存</button>
+        <button disabled={busy} onClick={persistGasConnection}>GAS接続を使う</button>
       </details>
 
       <h2>登録済みリスト</h2>
@@ -223,7 +299,7 @@ function App() {
           <p>
             <label>検索するタブ<br/>
               <select value={sheetName} onChange={(e)=>chooseSheet(e.target.value)}>
-                {inspection.sheets.map((sheet)=><option key={sheet.name} value={sheet.name}>{sheet.name} ({sheet.rowCount}件)</option>)}
+                {inspection.sheets.map((sheet)=><option key={sheet.name} value={sheet.name}>{sheetLabel(sheet)}</option>)}
               </select>
             </label>
           </p>
@@ -245,7 +321,7 @@ function App() {
 
       <p style={{minHeight:24}}>{message}</p>
       <hr/>
-      <p style={{color:'#666'}}>1行目を列名として扱います。2列の表ならKey/Valueは自動選択され、名前・コードのどちらからでも検索できます。</p>
+      <p style={{color:'#666'}}>1行目を列名として扱います。Sheets API直結時は表示済みの文字列を取得するため、Sheet側で設定した先頭ゼロなどの表示形式も保持します。</p>
     </main>
   );
 }
