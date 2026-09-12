@@ -21,9 +21,6 @@ export default defineConfig({
       version: EXTENSION_VERSION,
       description: 'Search and copy key-value reference lists from Google Sheets and other data sources.',
       icons: ICONS,
-      action: {
-        default_icon: ICONS
-      },
       permissions: ['storage', 'identity'],
       host_permissions: [
         'https://sheets.googleapis.com/*'
