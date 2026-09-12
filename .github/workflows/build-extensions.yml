@@ -95,7 +95,8 @@ jobs:
                   process.exit(1);
                 }
               }
-              if (manifest.action?.default_icon?.["16"] !== "icons/icon16.png") {
+              const toolbarIcon = manifest.action?.default_icon ?? manifest.browser_action?.default_icon;
+              if (toolbarIcon?.["16"] !== "icons/icon16.png") {
                 console.error("Toolbar icon is missing or incorrect");
                 process.exit(1);
               }
