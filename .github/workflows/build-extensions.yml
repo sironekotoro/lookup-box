@@ -99,7 +99,7 @@ jobs:
               const toolbarValues = typeof toolbarIcon === "string"
                 ? [toolbarIcon]
                 : Object.values(toolbarIcon ?? {});
-              if (!toolbarValues.some((value) => /^icons\/icon(?:16|32|48|128)\.png$/.test(String(value)))) {
+              if (!toolbarValues.some((value) => /^\/?icons\/icon(?:16|32|48|128)\.png$/.test(String(value)))) {
                 console.error("Toolbar icon is missing or incorrect");
                 console.error(JSON.stringify(manifest.action ?? manifest.browser_action ?? null));
                 process.exit(1);
