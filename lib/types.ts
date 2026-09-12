@@ -37,7 +37,7 @@ export interface LookupList {
 export interface SheetInspection {
   name: string;
   headers: string[];
-  rowCount: number;
+  rowCount?: number;
 }
 
 export interface SpreadsheetInspection {
