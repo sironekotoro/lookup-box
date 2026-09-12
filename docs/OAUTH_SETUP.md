@@ -34,10 +34,16 @@ Do not create or embed an OAuth client secret in the extension. Browser extensio
 
 Chrome uses `chrome.identity.getAuthToken()`.
 
-1. Build/install the Chrome extension in a stable local directory.
-2. Open `chrome://extensions` and copy the LookupBox extension ID.
-3. In Google Cloud, create an OAuth client with application type **Chrome Extension**.
-4. Enter the LookupBox extension ID as the Item ID.
+LookupBox now pins a development Chrome extension identity through the manifest `key`, so unpacked builds use this stable extension ID:
+
+`fknnikkfcolngfdemfoimajmbjdpkjbp`
+
+The earlier unpacked ID `pcijmegbnfhdklhemhejcpklmloenokk` was created before the ID was pinned. Do not use that older ID when creating the OAuth client.
+
+1. In Google Cloud, open **Google Auth Platform -> Clients**.
+2. Create an OAuth client with application type **Chrome Extension**.
+3. Use `LookupBox Chrome` as the client name.
+4. Enter `fknnikkfcolngfdemfoimajmbjdpkjbp` as the Item ID.
 5. Copy the generated client ID.
 
 For a local build, put it in `.env.chrome.local`:
@@ -56,7 +62,7 @@ gh variable set WXT_GOOGLE_CHROME_CLIENT_ID \
 
 The OAuth client ID is an application identifier, not a secret. Do not add a client secret.
 
-Before Chrome Web Store publication, pin the production extension ID and make sure the OAuth client targets that production ID.
+Before Chrome Web Store publication, verify that the production Web Store identity matches the OAuth client strategy. If the store identity changes, create a production OAuth client for that production ID.
 
 ## Firefox development bridge
 
