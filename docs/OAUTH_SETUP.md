@@ -74,9 +74,15 @@ The Firefox manifest uses a fixed Gecko extension ID:
 
 This keeps `browser.identity.getRedirectURL()` stable across temporary installs.
 
+Firefox's normal identity redirect URL uses a Mozilla-owned dummy domain. Google may reject that domain because the extension developer cannot verify ownership. Firefox 86+ explicitly supports a loopback alternative, so LookupBox converts the identity URL to this form:
+
+`http://127.0.0.1/mozoauth2/<stable-subdomain>`
+
+Google allows localhost / loopback redirect URIs for testing. The LookupBox settings page shows the exact URI to register.
+
 1. Install the Firefox build temporarily from `about:debugging`.
 2. Open LookupBox settings.
-3. Expand **開発情報** and copy the displayed `redirect URL`.
+3. Expand **開発情報** and copy the displayed `redirect URL` (it should start with `http://127.0.0.1/mozoauth2/`).
 4. In Google Cloud, create a **Web application** OAuth client for the Firefox development bridge.
 5. Register the exact redirect URL shown by LookupBox as an authorized redirect URI.
 6. Copy the generated client ID.
