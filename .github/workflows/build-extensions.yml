@@ -51,6 +51,13 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
+
+          expected_version="$(sed -n "s/^const EXTENSION_VERSION = '\([^']*\)';$/\1/p" wxt.config.ts)"
+          if [[ -z "$expected_version" ]]; then
+            echo "Could not read EXTENSION_VERSION from wxt.config.ts"
+            exit 1
+          fi
+
           zips=(.output/*chrome*.zip .output/*firefox*.zip)
           if [[ ${#zips[@]} -lt 2 ]]; then
             echo "Expected Chrome and Firefox package ZIPs."
@@ -58,9 +65,24 @@ jobs:
           fi
 
           for zip in "${zips[@]}"; do
+            if [[ "$zip" != *"-$expected_version-"* ]]; then
+              echo "Artifact filename does not include extension version $expected_version: $zip"
+              exit 1
+            fi
+
             tmp="$(mktemp -d)"
             unzip -q "$zip" -d "$tmp"
             test -f "$tmp/manifest.json"
+
+            node -e '
+              const fs = require("fs");
+              const [manifestPath, expected] = process.argv.slice(1);
+              const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+              if (manifest.version !== expected) {
+                console.error(`Expected manifest version ${expected}, got ${manifest.version}`);
+                process.exit(1);
+              }
+            ' "$tmp/manifest.json" "$expected_version"
 
             if grep -Eq 'script\.google\.com|script\.googleusercontent\.com' "$tmp/manifest.json"; then
               echo "Forbidden gateway host permission found in $zip"
