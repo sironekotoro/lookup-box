@@ -9,7 +9,14 @@ import type {
   SheetInspection,
   SpreadsheetInspection
 } from '../types';
-import type { SimpleSheetLoadOptions } from './googleSheetsProvider';
+
+export interface GoogleSheetLoadOptions {
+  spreadsheetUrl: string;
+  sheetName: string;
+  searchColumns?: string[];
+  displayColumns?: string[];
+  copyColumns?: string[];
+}
 
 export interface GoogleAccessTokenSource {
   getAccessToken(interactive?: boolean): Promise<string>;
@@ -80,11 +87,8 @@ export class GoogleSheetsApiProvider implements LookupProvider {
   label = 'Google Sheets API';
 
   constructor(
-    private simpleOptions?: SimpleSheetLoadOptions,
+    private simpleOptions?: GoogleSheetLoadOptions,
     private tokenSource: GoogleAccessTokenSource = browserTokenSource,
-    // Do not store window.fetch directly and later call it as `this.fetchImpl(...)`.
-    // Chrome's Window.fetch is brand-checked and throws "Illegal invocation" when
-    // invoked with the provider instance as `this`.
     private fetchImpl: FetchLike = (input, init) => fetch(input, init)
   ) {}
 
