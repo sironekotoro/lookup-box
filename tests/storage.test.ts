@@ -18,7 +18,7 @@ const legacyBundle: DatasetBundle = {
 };
 
 describe('settings migration', () => {
-  it('migrates the old single-list settings without losing the connection', () => {
+  it('migrates the old single-list settings without losing the GAS connection', () => {
     const migrated = normalizeSettings({
       gasUrl: 'https://script.google.com/macros/s/example/exec',
       apiToken: 'token',
@@ -32,6 +32,7 @@ describe('settings migration', () => {
 
     expect(migrated.gasUrl).toContain('script.google.com');
     expect(migrated.apiToken).toBe('token');
+    expect(migrated.connectionMode).toBe('gas');
     expect(migrated.legacySpreadsheetUrl).toContain('/spreadsheets/d/');
     expect(migrated.legacySheetName).toBe('companies');
     expect(migrated.lists).toHaveLength(1);
@@ -42,9 +43,9 @@ describe('settings migration', () => {
     });
   });
 
-  it('normalizes current multi-list settings', () => {
+  it('preserves OAuth mode in current multi-list settings', () => {
     const normalized = normalizeSettings({
-      gasUrl: 'gas',
+      connectionMode: 'oauth',
       lists: [{
         id: 'list-1',
         spreadsheetId: 'sheet-id',
@@ -56,8 +57,18 @@ describe('settings migration', () => {
       }]
     });
 
+    expect(normalized.connectionMode).toBe('oauth');
     expect(normalized.lists).toHaveLength(1);
     expect(normalized.lists[0]?.spreadsheetTitle).toBe('Stocks');
     expect(normalized.useMock).toBe(false);
+  });
+
+  it('falls back to GAS mode when current settings contain legacy credentials', () => {
+    const normalized = normalizeSettings({
+      gasUrl: 'gas',
+      apiToken: 'token',
+      lists: []
+    });
+    expect(normalized.connectionMode).toBe('gas');
   });
 });
