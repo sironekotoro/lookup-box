@@ -2,7 +2,7 @@
 
 LookupBox turns reference lists into a small, fast browser lookup tool.
 
-Current MVP: multiple Google Sheet-backed lookup lists via a thin GAS gateway. Planned: direct Google OAuth, SQLite and CSV.
+Current product direction: multiple Google Sheet-backed lookup lists with direct Google OAuth + Sheets API. The existing GAS gateway remains only as a migration/recovery fallback while OAuth is being validated.
 
 ## Current features
 
@@ -16,6 +16,9 @@ Current MVP: multiple Google Sheet-backed lookup lists via a thin GAS gateway. P
 - Show last sync time
 - Chrome and Firefox builds from one WXT codebase
 - Legacy single-list settings migration
+- Direct Google Sheets API provider
+- Browser-specific Google auth adapter
+- GAS fallback for existing installations
 
 ## Development
 
@@ -37,9 +40,31 @@ npm run zip:firefox
 
 WXT supports browser-specific targets through `-b chrome` and `-b firefox`.
 
+## Google OAuth
+
+OAuth client IDs are build-time configuration, not end-user settings.
+
+- Chrome: `WXT_GOOGLE_CHROME_CLIENT_ID`
+- Firefox development bridge: `WXT_GOOGLE_FIREFOX_CLIENT_ID`
+
+The extension requests the read-only Sheets scope:
+
+`https://www.googleapis.com/auth/spreadsheets.readonly`
+
+When the relevant client ID is present, the settings screen exposes **Googleに接続** and normal use no longer requires a GAS URL or API Token.
+
+See `docs/OAUTH_SETUP.md` for the one-time Google Cloud development setup.
+
 ## CI
 
 `.github/workflows/build-extensions.yml` runs typecheck/tests and generates downloadable Chrome and Firefox ZIP artifacts on pushes, pull requests, and manual runs.
+
+GitHub Actions reads the optional OAuth client IDs from repository variables named:
+
+- `WXT_GOOGLE_CHROME_CLIENT_ID`
+- `WXT_GOOGLE_FIREFOX_CLIENT_ID`
+
+The build remains valid when those variables are absent; OAuth is simply reported as not configured in that artifact.
 
 ## GitHub Pages
 
@@ -49,16 +74,17 @@ Project site:
 
 `https://sironekotoro.github.io/lookup-box/`
 
-## Current GAS setup
+## GAS fallback
 
-The current working baseline is documented in `gas/Code.gs`. Keep `LOOKUP_API_TOKEN` secret. The allowlist is optional; when absent, the gateway can open any Spreadsheet accessible to the GAS execution account if its ID is supplied.
+The previous working gateway is documented in `gas/Code.gs`. Keep `LOOKUP_API_TOKEN` secret if this fallback is used.
 
-The long-term target is to remove GAS from the normal user flow and use Google OAuth directly from the extension.
+GAS configuration is intentionally moved out of the normal product flow. Existing list definitions are preserved when changing the connection mode from GAS to OAuth.
 
 ## Design notes
 
 See:
 
 - `docs/ARCHITECTURE.md`
+- `docs/OAUTH_SETUP.md`
 - `docs/ROADMAP.md`
 - `AGENTS.md`
