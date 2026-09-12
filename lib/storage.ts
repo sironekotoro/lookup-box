@@ -9,6 +9,7 @@ const SETTINGS_KEY = 'lookup.settings.v3';
 export interface LookupSettings {
   gasUrl?: string;
   apiToken?: string;
+  connectionMode?: 'oauth' | 'gas';
   useMock?: boolean;
   lists: LookupList[];
   legacySpreadsheetUrl?: string;
@@ -32,6 +33,10 @@ function text(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
+function connectionMode(value: unknown): 'oauth' | 'gas' | undefined {
+  return value === 'oauth' || value === 'gas' ? value : undefined;
+}
+
 function isLookupList(value: unknown): value is LookupList {
   if (!value || typeof value !== 'object') return false;
   const list = value as Partial<LookupList>;
@@ -49,9 +54,12 @@ function isLookupList(value: unknown): value is LookupList {
 export function normalizeSettings(raw: unknown, cache?: Partial<CacheValue>): LookupSettings {
   const source = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
   if (Array.isArray(source.lists)) {
+    const gasUrl = text(source.gasUrl);
+    const apiToken = text(source.apiToken);
     return {
-      gasUrl: text(source.gasUrl),
-      apiToken: text(source.apiToken),
+      gasUrl,
+      apiToken,
+      connectionMode: connectionMode(source.connectionMode) ?? (gasUrl && apiToken ? 'gas' : undefined),
       useMock: source.useMock === true,
       lists: source.lists.filter(isLookupList),
       legacySpreadsheetUrl: text(source.legacySpreadsheetUrl),
@@ -62,6 +70,8 @@ export function normalizeSettings(raw: unknown, cache?: Partial<CacheValue>): Lo
   const legacy = source as LegacyLookupSettings;
   const spreadsheetUrl = text(legacy.spreadsheetUrl);
   const sheetName = text(legacy.sheetName);
+  const gasUrl = text(legacy.gasUrl);
+  const apiToken = text(legacy.apiToken);
   const bundles = cache?.bundles ?? [];
   const bundle = bundles.find((candidate) => candidate.definition.sheet_name === sheetName) ?? bundles[0];
   const searchColumns = bundle?.definition.search_columns?.filter(Boolean) ?? [];
@@ -90,8 +100,9 @@ export function normalizeSettings(raw: unknown, cache?: Partial<CacheValue>): Lo
   }
 
   return {
-    gasUrl: text(legacy.gasUrl),
-    apiToken: text(legacy.apiToken),
+    gasUrl,
+    apiToken,
+    connectionMode: gasUrl && apiToken ? 'gas' : undefined,
     useMock: legacy.useMock === true,
     lists,
     legacySpreadsheetUrl: spreadsheetUrl,

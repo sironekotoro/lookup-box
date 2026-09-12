@@ -23,21 +23,33 @@
 - [x] Legacy single-list settings migration
 - [ ] Per-list sync timestamp
 
-## Next milestone: direct Google OAuth
+## Direct Google OAuth milestone
 
-- [ ] Register extension identity / OAuth client
-- [ ] Google sign-in from extension
-- [ ] Fetch Spreadsheet metadata directly
-- [ ] Keep Chrome/Firefox auth differences behind an auth adapter
-- [ ] Remove GAS/API-token requirement from normal flow
-- [ ] Preserve existing multi-list configuration during migration
+- [x] Google auth adapter boundary
+- [x] Chrome `chrome.identity.getAuthToken()` implementation
+- [x] Firefox `identity.launchWebAuthFlow()` development bridge
+- [x] Direct Google Sheets API provider
+- [x] Read Spreadsheet metadata directly
+- [x] Read formatted cell values directly
+- [x] Keep existing multi-list definitions during GAS → OAuth migration
+- [x] Move GAS URL / API Token out of the normal settings flow
+- [x] Fixed Firefox extension ID for a stable redirect URL
+- [x] CI support for build-time OAuth client IDs
+- [ ] Create Google Cloud OAuth consent configuration for development
+- [ ] Create Chrome Extension OAuth client and set `WXT_GOOGLE_CHROME_CLIENT_ID`
+- [ ] Create Firefox development OAuth client and set `WXT_GOOGLE_FIREFOX_CLIENT_ID`
+- [ ] Runtime smoke test direct OAuth in Chrome
+- [ ] Runtime smoke test direct OAuth in Firefox
+- [ ] Remove GAS dependency from the default shipped artifacts after OAuth smoke tests pass
 
 ## Public distribution hardening
 
+- [ ] Google OAuth verification for public distribution or narrower scope design
 - [ ] Google Picker + `drive.file` evaluation for least-privilege public distribution
+- [ ] Replace/validate Firefox development auth bridge with public-release-safe authorization flow
 - [ ] Privacy / permission documentation
 - [ ] Firefox `data_collection_permissions` declaration
-- [ ] Stable Firefox extension ID
+- [ ] Stable Chrome production extension ID
 - [ ] Firefox store publication
 - [ ] Chrome Web Store publication
 
