@@ -4,7 +4,7 @@ import type { DatasetBundle } from '../../lib/types';
 import { mapBundleToLookupList } from '../../lib/lists';
 import { loadCache, loadSettings, saveCache } from '../../lib/storage';
 import { searchDatasets } from '../../lib/search';
-import { GoogleSheetsProvider } from '../../lib/providers/googleSheetsProvider';
+import { listLoadOptions, makeGoogleSourceProvider } from '../../lib/providers/googleSource';
 import { MockProvider } from '../../lib/providers/mockProvider';
 import './style.css';
 
@@ -63,17 +63,7 @@ function App() {
 
         bundles = [];
         for (const list of settings.lists) {
-          const provider = new GoogleSheetsProvider(
-            settings.gasUrl ?? '',
-            settings.apiToken ?? '',
-            {
-              spreadsheetUrl: list.spreadsheetUrl,
-              sheetName: list.sheetName,
-              searchColumns: [list.keyColumn, list.valueColumn],
-              displayColumns: [list.keyColumn, list.valueColumn],
-              copyColumns: [list.keyColumn, list.valueColumn]
-            }
-          );
+          const provider = makeGoogleSourceProvider(settings, listLoadOptions(list));
           const loaded = await provider.load();
           const source = loaded[0];
           if (!source) throw new Error(`${list.spreadsheetTitle} / ${list.sheetName} を読み込めませんでした。`);
@@ -88,7 +78,10 @@ function App() {
       setStatus(`✓ ${bundles.length}リスト / ${rows}件を同期`);
       setTimeout(() => setStatus(''), 1800);
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : String(error));
+      const message = error instanceof Error ? error.message : String(error);
+      setStatus(message.includes('再認証')
+        ? `${message} 設定を開いてGoogleに接続してください。`
+        : message);
     } finally {
       setSyncing(false);
     }
