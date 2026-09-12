@@ -219,6 +219,17 @@ function App() {
   }
 
   const headers = selectedSheet?.headers.filter(Boolean) ?? [];
+  const fieldStyle: React.CSSProperties = {
+    display: 'grid',
+    gap: 6,
+    maxWidth: 360
+  };
+  const selectStyle: React.CSSProperties = {
+    width: '100%',
+    minWidth: 0,
+    padding: '6px 8px',
+    boxSizing: 'border-box'
+  };
 
   return (
     <main style={{maxWidth:760, margin:'30px auto', fontFamily:'system-ui', lineHeight:1.55, padding:'0 18px'}}>
@@ -274,26 +285,27 @@ function App() {
       {inspection && (
         <section style={{marginTop:20, padding:14, border:'1px solid #ddd', borderRadius:8}}>
           <strong>{inspection.title}</strong>
-          <p>
-            <label>検索するタブ<br/>
-              <select value={sheetName} onChange={(e)=>chooseSheet(e.target.value)}>
+          <div style={{display:'grid', gap:14, marginTop:18}}>
+            <label style={fieldStyle}>
+              <span>検索するタブ</span>
+              <select style={selectStyle} value={sheetName} onChange={(e)=>chooseSheet(e.target.value)}>
                 {inspection.sheets.map((sheet)=><option key={sheet.name} value={sheet.name}>{sheetLabel(sheet)}</option>)}
               </select>
             </label>
-          </p>
-          <p>
-            <label>Key列<br/>
-              <select value={keyColumn} onChange={(e)=>setKeyColumn(e.target.value)}>
-                {headers.map((header)=><option key={header} value={header}>{header}</option>)}
-              </select>
-            </label>{' '}
-            <label>Value列<br/>
-              <select value={valueColumn} onChange={(e)=>setValueColumn(e.target.value)}>
+            <label style={fieldStyle}>
+              <span>Key列</span>
+              <select style={selectStyle} value={keyColumn} onChange={(e)=>setKeyColumn(e.target.value)}>
                 {headers.map((header)=><option key={header} value={header}>{header}</option>)}
               </select>
             </label>
-          </p>
-          <button disabled={busy || !keyColumn || !valueColumn} onClick={addList}>登録して同期</button>
+            <label style={fieldStyle}>
+              <span>Value列</span>
+              <select style={selectStyle} value={valueColumn} onChange={(e)=>setValueColumn(e.target.value)}>
+                {headers.map((header)=><option key={header} value={header}>{header}</option>)}
+              </select>
+            </label>
+          </div>
+          <button style={{marginTop:18}} disabled={busy || !keyColumn || !valueColumn} onClick={addList}>登録して同期</button>
         </section>
       )}
 
