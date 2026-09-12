@@ -24,6 +24,16 @@ export interface LookupProvider {
   load(): Promise<DatasetBundle[]>;
 }
 
+export interface LookupList {
+  id: string;
+  spreadsheetId: string;
+  spreadsheetUrl: string;
+  spreadsheetTitle: string;
+  sheetName: string;
+  keyColumn: string;
+  valueColumn: string;
+}
+
 export interface SheetInspection {
   name: string;
   headers: string[];
