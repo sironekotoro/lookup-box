@@ -2,7 +2,7 @@
 
 LookupBox turns reference lists into a small, fast browser lookup tool.
 
-Current product direction: multiple Google Sheet-backed lookup lists with direct Google OAuth + Sheets API. Standard Chrome and Firefox distribution artifacts are OAuth-only and do not contain the previous gateway runtime or its host permissions.
+Current product direction: multiple Google Sheet-backed lookup lists with direct Google OAuth + Sheets API. Standard Chrome/Firefox distribution artifacts are OAuth-only; the old GAS gateway is retained in the repository only as historical/reference material.
 
 ## Current features
 
@@ -15,9 +15,10 @@ Current product direction: multiple Google Sheet-backed lookup lists with direct
 - Re-sync all registered lists from the popup
 - Show last sync time
 - Chrome and Firefox builds from one WXT codebase
-- Legacy single-list/list-definition migration
+- Legacy single-list settings migration without carrying forward old gateway credentials
 - Direct Google Sheets API provider
 - Browser-specific Google auth adapter
+- OAuth-only standard distribution artifacts
 
 ## Development
 
@@ -50,26 +51,26 @@ The extension requests the read-only Sheets scope:
 
 `https://www.googleapis.com/auth/spreadsheets.readonly`
 
-The user flow is:
+Normal users install LookupBox, click **Googleに接続**, paste a Google Sheet URL, and register the list. No GAS URL or API Token is present in the standard build.
 
-1. Install LookupBox.
-2. Click **Googleに接続**.
-3. Paste a Google Sheet URL.
-4. Choose Sheet / Key / Value.
-5. Search and copy from the popup.
+See `docs/OAUTH_SETUP.md` for the one-time Google Cloud development setup.
 
-See `docs/OAUTH_SETUP.md` for the Google Cloud development setup.
+## Versioning
+
+Browser-extension releases use a four-part numeric version such as `0.4.26.913`, while `package.json` remains normal SemVer for npm/tooling compatibility.
+
+See `docs/VERSIONING.md` for the release-version convention.
 
 ## CI
 
-`.github/workflows/build-extensions.yml` runs typecheck/tests and generates downloadable Chrome and Firefox ZIP artifacts on pushes, pull requests, and manual runs.
+`.github/workflows/build-extensions.yml` runs typecheck/tests, generates Chrome and Firefox ZIP artifacts, verifies the release version, and rejects packages that contain legacy GAS host permissions or runtime strings.
 
 GitHub Actions reads OAuth client IDs from repository variables named:
 
 - `WXT_GOOGLE_CHROME_CLIENT_ID`
 - `WXT_GOOGLE_FIREFOX_CLIENT_ID`
 
-CI also unpacks both browser ZIPs and fails if the normal artifacts contain the old gateway host permissions or runtime configuration strings.
+The build remains valid when those variables are absent; OAuth is simply reported as not configured in that artifact.
 
 ## GitHub Pages
 
@@ -79,11 +80,9 @@ Project site:
 
 `https://sironekotoro.github.io/lookup-box/`
 
-## Historical gateway reference
+## Historical GAS reference
 
-`gas/Code.gs` is retained only as historical/reference material for the earlier implementation. It is not imported by the extension runtime and is not part of the standard browser distribution artifacts.
-
-When upgrading an older installation, LookupBox keeps compatible list definitions/cache where possible but does not carry legacy connection credentials into the current settings schema. Users reconnect through Google OAuth.
+The previous gateway implementation remains in `gas/Code.gs` for historical/reference purposes only. Standard extension builds do not import it, expose its settings, or request its host permissions.
 
 ## Design notes
 
@@ -91,5 +90,6 @@ See:
 
 - `docs/ARCHITECTURE.md`
 - `docs/OAUTH_SETUP.md`
+- `docs/VERSIONING.md`
 - `docs/ROADMAP.md`
 - `AGENTS.md`
