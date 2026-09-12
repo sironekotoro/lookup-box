@@ -13,13 +13,9 @@ export default defineConfig({
       description: 'Search and copy key-value reference lists from Google Sheets and other data sources.',
       permissions: ['storage', 'identity'],
       host_permissions: [
-        'https://sheets.googleapis.com/*',
-        'https://script.google.com/*',
-        'https://script.googleusercontent.com/*'
+        'https://sheets.googleapis.com/*'
       ],
       ...(browser === 'chrome' ? {
-        // Pin the unpacked/build extension ID so the Google OAuth Chrome client remains stable.
-        // This public key intentionally contains no private key material.
         key: CHROME_EXTENSION_KEY,
         ...(chromeClientId ? {
           oauth2: {
