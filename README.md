@@ -21,6 +21,7 @@ Current product direction: multiple Google Sheet-backed lookup lists with direct
 - Direct Google Sheets API provider
 - Browser-specific Google auth adapter
 - OAuth-only standard distribution artifacts
+- Official magnifying-glass + list browser icon
 
 ## Development
 
@@ -59,13 +60,17 @@ See `docs/OAUTH_SETUP.md` for the one-time Google Cloud development setup.
 
 ## Versioning
 
-Browser-extension releases use a four-part numeric version such as `0.4.26.913`, while `package.json` remains normal SemVer for npm/tooling compatibility.
+Browser-extension releases use a four-part numeric version such as `0.5.26.913`, while `package.json` remains normal SemVer for npm/tooling compatibility.
 
 See `docs/VERSIONING.md` for the release-version convention.
 
+## Icon assets
+
+The editable master is `assets/branding/lookupbox-icon.svg`. Browser-ready 16/32/48/128px PNGs live under `public/icons/` and are wired into both the extension icon and toolbar action.
+
 ## CI
 
-`.github/workflows/build-extensions.yml` runs typecheck/tests, generates Chrome and Firefox ZIP artifacts, verifies the release version, and rejects packages that contain legacy GAS host permissions or runtime strings.
+`.github/workflows/build-extensions.yml` runs typecheck/tests, generates Chrome and Firefox ZIP artifacts, verifies the release version and icon assets, and rejects packages that contain legacy GAS host permissions or runtime strings.
 
 GitHub Actions reads OAuth client IDs from repository variables named:
 
