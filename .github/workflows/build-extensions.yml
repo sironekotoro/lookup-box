@@ -74,12 +74,29 @@ jobs:
             unzip -q "$zip" -d "$tmp"
             test -f "$tmp/manifest.json"
 
+            for size in 16 32 48 128; do
+              if [[ ! -f "$tmp/icons/icon${size}.png" ]]; then
+                echo "Missing icon${size}.png in $zip"
+                exit 1
+              fi
+            done
+
             node -e '
               const fs = require("fs");
               const [manifestPath, expected] = process.argv.slice(1);
               const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
               if (manifest.version !== expected) {
                 console.error(`Expected manifest version ${expected}, got ${manifest.version}`);
+                process.exit(1);
+              }
+              for (const size of ["16", "32", "48", "128"]) {
+                if (manifest.icons?.[size] !== `icons/icon${size}.png`) {
+                  console.error(`Manifest icon ${size} is missing or incorrect`);
+                  process.exit(1);
+                }
+              }
+              if (manifest.action?.default_icon?.["16"] !== "icons/icon16.png") {
+                console.error("Toolbar icon is missing or incorrect");
                 process.exit(1);
               }
             ' "$tmp/manifest.json" "$expected_version"
