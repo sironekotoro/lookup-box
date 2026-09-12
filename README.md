@@ -2,7 +2,7 @@
 
 LookupBox turns reference lists into a small, fast browser lookup tool.
 
-Current product direction: multiple Google Sheet-backed lookup lists with direct Google OAuth + Sheets API. The existing GAS gateway remains only as a migration/recovery fallback while OAuth is being validated.
+Current product direction: multiple Google Sheet-backed lookup lists with direct Google OAuth + Sheets API. Standard Chrome and Firefox distribution artifacts are OAuth-only and do not contain the previous gateway runtime or its host permissions.
 
 ## Current features
 
@@ -15,10 +15,9 @@ Current product direction: multiple Google Sheet-backed lookup lists with direct
 - Re-sync all registered lists from the popup
 - Show last sync time
 - Chrome and Firefox builds from one WXT codebase
-- Legacy single-list settings migration
+- Legacy single-list/list-definition migration
 - Direct Google Sheets API provider
 - Browser-specific Google auth adapter
-- GAS fallback for existing installations
 
 ## Development
 
@@ -51,20 +50,26 @@ The extension requests the read-only Sheets scope:
 
 `https://www.googleapis.com/auth/spreadsheets.readonly`
 
-When the relevant client ID is present, the settings screen exposes **Googleに接続** and normal use no longer requires a GAS URL or API Token.
+The user flow is:
 
-See `docs/OAUTH_SETUP.md` for the one-time Google Cloud development setup.
+1. Install LookupBox.
+2. Click **Googleに接続**.
+3. Paste a Google Sheet URL.
+4. Choose Sheet / Key / Value.
+5. Search and copy from the popup.
+
+See `docs/OAUTH_SETUP.md` for the Google Cloud development setup.
 
 ## CI
 
 `.github/workflows/build-extensions.yml` runs typecheck/tests and generates downloadable Chrome and Firefox ZIP artifacts on pushes, pull requests, and manual runs.
 
-GitHub Actions reads the optional OAuth client IDs from repository variables named:
+GitHub Actions reads OAuth client IDs from repository variables named:
 
 - `WXT_GOOGLE_CHROME_CLIENT_ID`
 - `WXT_GOOGLE_FIREFOX_CLIENT_ID`
 
-The build remains valid when those variables are absent; OAuth is simply reported as not configured in that artifact.
+CI also unpacks both browser ZIPs and fails if the normal artifacts contain the old gateway host permissions or runtime configuration strings.
 
 ## GitHub Pages
 
@@ -74,11 +79,11 @@ Project site:
 
 `https://sironekotoro.github.io/lookup-box/`
 
-## GAS fallback
+## Historical gateway reference
 
-The previous working gateway is documented in `gas/Code.gs`. Keep `LOOKUP_API_TOKEN` secret if this fallback is used.
+`gas/Code.gs` is retained only as historical/reference material for the earlier implementation. It is not imported by the extension runtime and is not part of the standard browser distribution artifacts.
 
-GAS configuration is intentionally moved out of the normal product flow. Existing list definitions are preserved when changing the connection mode from GAS to OAuth.
+When upgrading an older installation, LookupBox keeps compatible list definitions/cache where possible but does not carry legacy connection credentials into the current settings schema. Users reconnect through Google OAuth.
 
 ## Design notes
 
