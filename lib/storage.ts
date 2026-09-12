@@ -3,13 +3,11 @@ import { makeLookupListId, mapBundleToLookupList } from './lists';
 import type { DatasetBundle, LookupList } from './types';
 
 const CACHE_KEY = 'lookup.cache.v2';
-const LEGACY_SETTINGS_KEY = 'lookup.settings.v2';
-const SETTINGS_KEY = 'lookup.settings.v3';
+const LEGACY_SETTINGS_V2_KEY = 'lookup.settings.v2';
+const LEGACY_SETTINGS_V3_KEY = 'lookup.settings.v3';
+const SETTINGS_KEY = 'lookup.settings.v4';
 
 export interface LookupSettings {
-  gasUrl?: string;
-  apiToken?: string;
-  connectionMode?: 'oauth' | 'gas';
   useMock?: boolean;
   lists: LookupList[];
   legacySpreadsheetUrl?: string;
@@ -21,9 +19,7 @@ export type CacheValue = {
   syncedAt?: string;
 };
 
-type LegacyLookupSettings = {
-  gasUrl?: string;
-  apiToken?: string;
+type LegacySingleListSettings = {
   spreadsheetUrl?: string;
   sheetName?: string;
   useMock?: boolean;
@@ -31,10 +27,6 @@ type LegacyLookupSettings = {
 
 function text(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
-}
-
-function connectionMode(value: unknown): 'oauth' | 'gas' | undefined {
-  return value === 'oauth' || value === 'gas' ? value : undefined;
 }
 
 function isLookupList(value: unknown): value is LookupList {
@@ -54,12 +46,7 @@ function isLookupList(value: unknown): value is LookupList {
 export function normalizeSettings(raw: unknown, cache?: Partial<CacheValue>): LookupSettings {
   const source = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
   if (Array.isArray(source.lists)) {
-    const gasUrl = text(source.gasUrl);
-    const apiToken = text(source.apiToken);
     return {
-      gasUrl,
-      apiToken,
-      connectionMode: connectionMode(source.connectionMode) ?? (gasUrl && apiToken ? 'gas' : undefined),
       useMock: source.useMock === true,
       lists: source.lists.filter(isLookupList),
       legacySpreadsheetUrl: text(source.legacySpreadsheetUrl),
@@ -67,11 +54,9 @@ export function normalizeSettings(raw: unknown, cache?: Partial<CacheValue>): Lo
     };
   }
 
-  const legacy = source as LegacyLookupSettings;
+  const legacy = source as LegacySingleListSettings;
   const spreadsheetUrl = text(legacy.spreadsheetUrl);
   const sheetName = text(legacy.sheetName);
-  const gasUrl = text(legacy.gasUrl);
-  const apiToken = text(legacy.apiToken);
   const bundles = cache?.bundles ?? [];
   const bundle = bundles.find((candidate) => candidate.definition.sheet_name === sheetName) ?? bundles[0];
   const searchColumns = bundle?.definition.search_columns?.filter(Boolean) ?? [];
@@ -95,14 +80,11 @@ export function normalizeSettings(raw: unknown, cache?: Partial<CacheValue>): Lo
         valueColumn
       });
     } catch {
-      // Preserve legacy connection fields below so the settings screen can repair it.
+      // Preserve the source URL/name below so the settings screen can repair it.
     }
   }
 
   return {
-    gasUrl,
-    apiToken,
-    connectionMode: gasUrl && apiToken ? 'gas' : undefined,
     useMock: legacy.useMock === true,
     lists,
     legacySpreadsheetUrl: spreadsheetUrl,
@@ -142,13 +124,20 @@ export async function removeCacheBundle(datasetId: string): Promise<void> {
 }
 
 export async function loadSettings(): Promise<LookupSettings> {
-  const result = await browser.storage.local.get([SETTINGS_KEY, LEGACY_SETTINGS_KEY, CACHE_KEY]);
+  const result = await browser.storage.local.get([
+    SETTINGS_KEY,
+    LEGACY_SETTINGS_V3_KEY,
+    LEGACY_SETTINGS_V2_KEY,
+    CACHE_KEY
+  ]);
   const current = result[SETTINGS_KEY];
   if (current) return normalizeSettings(current);
 
   const cached = result[CACHE_KEY] as Partial<CacheValue> | undefined;
-  const migrated = normalizeSettings(result[LEGACY_SETTINGS_KEY], cached);
+  const legacy = result[LEGACY_SETTINGS_V3_KEY] ?? result[LEGACY_SETTINGS_V2_KEY];
+  const migrated = normalizeSettings(legacy, cached);
   await saveSettings(migrated);
+  await browser.storage.local.remove([LEGACY_SETTINGS_V3_KEY, LEGACY_SETTINGS_V2_KEY]);
 
   if (migrated.lists.length === 1 && cached?.bundles?.length) {
     const list = migrated.lists[0]!;
