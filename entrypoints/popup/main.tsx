@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { DatasetBundle } from '../../lib/types';
+import { mapBundleToLookupList } from '../../lib/lists';
 import { loadCache, loadSettings, saveCache } from '../../lib/storage';
 import { searchDatasets } from '../../lib/search';
 import { GoogleSheetsProvider } from '../../lib/providers/googleSheetsProvider';
@@ -29,6 +30,12 @@ function App() {
 
   useEffect(() => { loadCache().then(setCache); }, []);
 
+  useEffect(() => {
+    if (datasetId && !cache.bundles.some((bundle) => bundle.definition.dataset_id === datasetId)) {
+      setDatasetId('');
+    }
+  }, [cache.bundles, datasetId]);
+
   const hits = useMemo(
     () => searchDatasets(cache.bundles, query, datasetId || undefined),
     [cache.bundles, query, datasetId]
@@ -50,30 +57,35 @@ function App() {
       if (settings.useMock) {
         bundles = await new MockProvider().load();
       } else {
-        if (!settings.spreadsheetUrl || !settings.sheetName) {
-          throw new Error('設定画面でGoogle Sheetを選択してください。');
+        if (settings.lists.length === 0) {
+          throw new Error('設定画面でGoogle Sheetを登録してください。');
         }
-        const current = cache.bundles.find((b) => b.definition.sheet_name === settings.sheetName)
-          ?? cache.bundles[0];
-        const headers = current?.definition.search_columns ?? [];
-        const provider = new GoogleSheetsProvider(
-          settings.gasUrl ?? '',
-          settings.apiToken ?? '',
-          {
-            spreadsheetUrl: settings.spreadsheetUrl,
-            sheetName: settings.sheetName,
-            searchColumns: current?.definition.search_columns ?? headers,
-            displayColumns: current?.definition.display_columns ?? headers,
-            copyColumns: current?.definition.copy_columns ?? headers
-          }
-        );
-        bundles = await provider.load();
+
+        bundles = [];
+        for (const list of settings.lists) {
+          const provider = new GoogleSheetsProvider(
+            settings.gasUrl ?? '',
+            settings.apiToken ?? '',
+            {
+              spreadsheetUrl: list.spreadsheetUrl,
+              sheetName: list.sheetName,
+              searchColumns: [list.keyColumn, list.valueColumn],
+              displayColumns: [list.keyColumn, list.valueColumn],
+              copyColumns: [list.keyColumn, list.valueColumn]
+            }
+          );
+          const loaded = await provider.load();
+          const source = loaded[0];
+          if (!source) throw new Error(`${list.spreadsheetTitle} / ${list.sheetName} を読み込めませんでした。`);
+          bundles.push(mapBundleToLookupList(source, list, settings.lists));
+        }
       }
 
       await saveCache(bundles);
       const next = await loadCache();
       setCache(next);
-      setStatus(`✓ ${bundles.reduce((n, b) => n + b.rows.length, 0)}件を同期`);
+      const rows = bundles.reduce((n, bundle) => n + bundle.rows.length, 0);
+      setStatus(`✓ ${bundles.length}リスト / ${rows}件を同期`);
       setTimeout(() => setStatus(''), 1800);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : String(error));
@@ -82,7 +94,7 @@ function App() {
     }
   }
 
-  const count = cache.bundles.reduce((n, b) => n + b.rows.length, 0);
+  const count = cache.bundles.reduce((n, bundle) => n + bundle.rows.length, 0);
 
   return (
     <main>
@@ -94,32 +106,38 @@ function App() {
         </div>
       </header>
 
-      <div className="meta">{count}件 / 最終同期 {formatSyncedAt(cache.syncedAt)}</div>
+      <div className="meta">{cache.bundles.length}リスト / {count}件 / 最終同期 {formatSyncedAt(cache.syncedAt)}</div>
       {status && <div className="status">{status}</div>}
 
       {cache.bundles.length > 1 && (
         <select value={datasetId} onChange={(e) => setDatasetId(e.target.value)}>
-          <option value="">すべて</option>
-          {cache.bundles.map((b) => <option key={b.definition.dataset_id} value={b.definition.dataset_id}>{b.definition.display_name}</option>)}
+          <option value="">すべてのリスト</option>
+          {cache.bundles.map((bundle) => (
+            <option key={bundle.definition.dataset_id} value={bundle.definition.dataset_id}>
+              {bundle.definition.display_name}
+            </option>
+          ))}
         </select>
       )}
 
-      <input autoFocus placeholder="名前またはコードを検索..." value={query} onChange={(e) => setQuery(e.target.value)} />
+      <input autoFocus placeholder="検索..." value={query} onChange={(e) => setQuery(e.target.value)} />
 
-      {cache.bundles.length === 0 && <p className="empty">設定画面からGoogle Sheetを同期してください。</p>}
+      {cache.bundles.length === 0 && <p className="empty">設定画面からGoogle Sheetを登録・同期してください。</p>}
       <section className="results">
         {query && hits.length === 0 && cache.bundles.length > 0 && <p className="empty">該当なし</p>}
         {hits.map((hit, index) => {
-          const bundle = cache.bundles.find((b) => b.definition.dataset_id === hit.datasetId)!;
+          const bundle = cache.bundles.find((candidate) => candidate.definition.dataset_id === hit.datasetId)!;
           return (
             <article key={`${hit.datasetId}-${index}`}>
               {cache.bundles.length > 1 && <div className="dataset">{hit.datasetName}</div>}
-              {bundle.definition.display_columns.map((col) => (
-                <div className="field" key={col}>
-                  <span className="label">{col}</span>
-                  <span className="value">{hit.row[col] ?? ''}</span>
-                  {bundle.definition.copy_columns.includes(col) && (
-                    <button onClick={() => copy(hit.row[col] ?? '', `${index}-${col}`)}>{copied === `${index}-${col}` ? '✓' : 'コピー'}</button>
+              {bundle.definition.display_columns.map((column) => (
+                <div className="field" key={column}>
+                  <span className="label">{column}</span>
+                  <span className="value">{hit.row[column] ?? ''}</span>
+                  {bundle.definition.copy_columns.includes(column) && (
+                    <button onClick={() => copy(hit.row[column] ?? '', `${index}-${column}`)}>
+                      {copied === `${index}-${column}` ? '✓' : 'コピー'}
+                    </button>
                   )}
                 </div>
               ))}
