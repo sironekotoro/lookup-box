@@ -1,5 +1,7 @@
 # LookupBox
 
+<img src="assets/branding/lookupbox-icon.svg" alt="LookupBox icon" width="96">
+
 LookupBox turns reference lists into a small, fast browser lookup tool.
 
 Current product direction: multiple Google Sheet-backed lookup lists with direct Google OAuth + Sheets API. Standard Chrome/Firefox distribution artifacts are OAuth-only; the old GAS gateway is retained in the repository only as historical/reference material.
