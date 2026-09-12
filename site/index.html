@@ -15,14 +15,14 @@
   <p class="lead">参照リストを、ブラウザからすぐ検索・コピー。</p>
 
   <div class="box">
-    <strong>現在のMVP</strong><br>
-    複数のGoogle Sheetを登録し、Name → Code のような key-value リストをブラウザのポップアップから高速検索できます。
+    <strong>現在のLookupBox</strong><br>
+    Google OAuthで接続し、複数のGoogle Sheetを検索リストとして登録できます。通常版ではGAS URLやAPI Tokenの設定は不要です。
   </div>
 
   <h2>使い方</h2>
   <ol class="steps">
-    <li>1行目を列名にしたGoogle Sheetを用意します。</li>
-    <li>LookupBoxの設定画面にGoogle Sheet URLを貼り、「Sheetを確認」を押します。</li>
+    <li>LookupBoxをインストールし、設定画面で「Googleに接続」を押します。</li>
+    <li>1行目を列名にしたGoogle SheetのURLを貼り、「Sheetを確認」を押します。</li>
     <li>検索対象のタブと Key / Value 列を選び、「登録して同期」を押します。</li>
     <li>必要なら別のGoogle Sheetも同じ手順で追加します。リスト名はSpreadsheet名から自動で決まります。</li>
     <li>ポップアップで全リストを横断検索するか、リストを切り替えて検索します。</li>
@@ -39,13 +39,16 @@
   <h2>複数リスト</h2>
   <p>複数のSpreadsheetやタブを登録できます。同じSpreadsheetから複数リストを作る場合は、<code>Spreadsheet名 / Sheet名</code> のように自動で区別します。</p>
 
+  <h2>権限と接続</h2>
+  <p>標準のChrome / FirefoxパッケージはGoogle Sheets APIへ直接接続します。旧ゲートウェイ用のホスト権限や設定項目は配布パッケージから削除しています。</p>
+
   <h2>対応ブラウザ</h2>
   <p>同一コードベースからChrome / Firefox向けパッケージをGitHub Actionsで生成します。</p>
 
   <h2>ロードマップ</h2>
   <ul class="steps">
-    <li>Google OAuth + Sheets API直結（GAS不要化）</li>
     <li>Google Picker / 最小権限化</li>
+    <li>OAuth公開審査・ストア公開対応</li>
     <li>Local SQLite / CSV対応</li>
     <li>Chrome Web Store / Firefox Add-ons公開</li>
   </ul>
