@@ -1,0 +1,63 @@
+name: Build browser extensions
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          if [[ -f package-lock.json ]]; then
+            npm ci
+          else
+            npm install --no-audit --no-fund
+          fi
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build Chrome package
+        run: npm run zip:chrome
+
+      - name: Build Firefox package
+        run: npm run zip:firefox
+
+      - name: Show artifacts
+        run: find .output -maxdepth 2 -type f -print
+
+      - name: Upload Chrome extension
+        uses: actions/upload-artifact@v4
+        with:
+          name: lookup-box-chrome
+          path: .output/*chrome*.zip
+          if-no-files-found: error
+          include-hidden-files: true
+
+      - name: Upload Firefox extension
+        uses: actions/upload-artifact@v4
+        with:
+          name: lookup-box-firefox
+          path: .output/*firefox*.zip
+          if-no-files-found: error
+          include-hidden-files: true
