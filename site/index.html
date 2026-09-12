@@ -16,16 +16,17 @@
 
   <div class="box">
     <strong>現在のMVP</strong><br>
-    Google Sheetを同期し、Name → Code のような key-value リストを高速検索できます。
+    複数のGoogle Sheetを登録し、Name → Code のような key-value リストをブラウザのポップアップから高速検索できます。
   </div>
 
   <h2>使い方</h2>
   <ol class="steps">
     <li>1行目を列名にしたGoogle Sheetを用意します。</li>
-    <li>LookupBoxの設定画面にGoogle Sheet URLを入力します。</li>
-    <li>対象シートを選び、同期します。</li>
-    <li>ポップアップから名前やコードを検索し、必要な値をコピーします。</li>
-    <li>Sheetを更新したら、ポップアップの「再同期」を押します。</li>
+    <li>LookupBoxの設定画面にGoogle Sheet URLを貼り、「Sheetを確認」を押します。</li>
+    <li>検索対象のタブと Key / Value 列を選び、「登録して同期」を押します。</li>
+    <li>必要なら別のGoogle Sheetも同じ手順で追加します。リスト名はSpreadsheet名から自動で決まります。</li>
+    <li>ポップアップで全リストを横断検索するか、リストを切り替えて検索します。</li>
+    <li>Sheetを更新したら、ポップアップの「再同期」で登録済みリストをまとめて更新します。</li>
   </ol>
 
   <h2>例</h2>
@@ -35,16 +36,18 @@
   </table>
   <p>「Apple」でも「AAPL」でも同じ行を検索できます。</p>
 
+  <h2>複数リスト</h2>
+  <p>複数のSpreadsheetやタブを登録できます。同じSpreadsheetから複数リストを作る場合は、<code>Spreadsheet名 / Sheet名</code> のように自動で区別します。</p>
+
   <h2>対応ブラウザ</h2>
   <p>同一コードベースからChrome / Firefox向けパッケージをGitHub Actionsで生成します。</p>
 
   <h2>ロードマップ</h2>
   <ul class="steps">
     <li>Google OAuth + Sheets API直結（GAS不要化）</li>
-    <li>複数Lookupリストの登録・切替</li>
-    <li>Spreadsheet名 / Sheet名の自動表示名</li>
-    <li>key / value列の選択</li>
+    <li>Google Picker / 最小権限化</li>
     <li>Local SQLite / CSV対応</li>
+    <li>Chrome Web Store / Firefox Add-ons公開</li>
   </ul>
 
   <p class="small">LookupBox is under active development.</p>
