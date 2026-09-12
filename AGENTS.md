@@ -10,23 +10,27 @@ LookupBox is a generic browser lookup tool for reference lists. It is not a data
 - Repository name: `lookup-box`
 - Keep the UX minimal.
 - Users should not need to invent a list name; derive it from Spreadsheet metadata.
-- Future minimum list configuration: Spreadsheet, Sheet, key column, value column.
+- Minimum Google list configuration: Spreadsheet, Sheet, key column, value column.
 - When a Spreadsheet title collides, display `Spreadsheet title / Sheet name`.
 
 ## Architecture
 
 - Keep data-source-specific logic behind provider interfaces.
 - Google Sheets is the first production source.
+- Standard Chrome/Firefox artifacts use direct Google OAuth + Sheets API only.
+- Do not reintroduce the old gateway runtime or its host permissions into normal distribution artifacts.
+- `gas/` is historical/reference material only and must not be imported by extension runtime code.
 - Preserve room for local SQLite and CSV.
-- The current GAS path is a working baseline, not the final public architecture.
-- The target architecture is direct Google OAuth + Sheets API, subject to least-privilege review before public distribution.
+- Public distribution still requires least-privilege/OAuth review.
 
 ## Security
 
 - Never commit OAuth secrets, API tokens, access tokens, or private Sheet data.
+- OAuth client IDs are public application identifiers; client secrets are not used in the browser extension.
 - Do not add telemetry that transmits lookup data without explicit approval.
 - SQLite remains read-only and local-only unless explicitly redesigned.
 - Treat code-like values as strings; preserve leading zeroes.
+- Keep CI checks that reject old gateway permissions/runtime strings from packaged artifacts.
 
 ## Changes and validation
 

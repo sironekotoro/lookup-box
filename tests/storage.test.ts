@@ -18,7 +18,7 @@ const legacyBundle: DatasetBundle = {
 };
 
 describe('settings migration', () => {
-  it('migrates the old single-list settings without losing the GAS connection', () => {
+  it('migrates an old single-list configuration while dropping obsolete connection credentials', () => {
     const migrated = normalizeSettings({
       gasUrl: 'https://script.google.com/macros/s/example/exec',
       apiToken: 'token',
@@ -30,9 +30,9 @@ describe('settings migration', () => {
       syncedAt: '2026-09-12T00:00:00.000Z'
     });
 
-    expect(migrated.gasUrl).toContain('script.google.com');
-    expect(migrated.apiToken).toBe('token');
-    expect(migrated.connectionMode).toBe('gas');
+    expect(migrated).not.toHaveProperty('gasUrl');
+    expect(migrated).not.toHaveProperty('apiToken');
+    expect(migrated).not.toHaveProperty('connectionMode');
     expect(migrated.legacySpreadsheetUrl).toContain('/spreadsheets/d/');
     expect(migrated.legacySheetName).toBe('companies');
     expect(migrated.lists).toHaveLength(1);
@@ -43,9 +43,11 @@ describe('settings migration', () => {
     });
   });
 
-  it('preserves OAuth mode in current multi-list settings', () => {
+  it('keeps current multi-list settings while dropping obsolete connection fields', () => {
     const normalized = normalizeSettings({
       connectionMode: 'oauth',
+      gasUrl: 'old-gateway',
+      apiToken: 'old-token',
       lists: [{
         id: 'list-1',
         spreadsheetId: 'sheet-id',
@@ -57,18 +59,11 @@ describe('settings migration', () => {
       }]
     });
 
-    expect(normalized.connectionMode).toBe('oauth');
+    expect(normalized).not.toHaveProperty('gasUrl');
+    expect(normalized).not.toHaveProperty('apiToken');
+    expect(normalized).not.toHaveProperty('connectionMode');
     expect(normalized.lists).toHaveLength(1);
     expect(normalized.lists[0]?.spreadsheetTitle).toBe('Stocks');
     expect(normalized.useMock).toBe(false);
-  });
-
-  it('falls back to GAS mode when current settings contain legacy credentials', () => {
-    const normalized = normalizeSettings({
-      gasUrl: 'gas',
-      apiToken: 'token',
-      lists: []
-    });
-    expect(normalized.connectionMode).toBe('gas');
   });
 });

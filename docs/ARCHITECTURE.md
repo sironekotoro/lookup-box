@@ -14,15 +14,9 @@ LookupBox extension
   -> popup search / copy
 ```
 
-The old GAS gateway remains available only as a migration/recovery fallback:
+The standard Chrome and Firefox distribution artifacts are OAuth-only. They do not request gateway host permissions and do not include a gateway runtime provider.
 
-```text
-LookupBox extension
-  -> GAS Web App
-  -> Google Sheets
-```
-
-Existing multi-list definitions do not depend on the connection method, so a list can move from GAS to OAuth without being recreated.
+The previous `gas/Code.gs` implementation remains in the repository only as historical/reference material.
 
 ## Lookup list model
 
@@ -37,6 +31,12 @@ The visible list name is derived automatically from the Spreadsheet title. When 
 
 The user does not invent a list name.
 
+## Settings migration
+
+Current settings use an OAuth-only schema.
+
+On upgrade from older settings, LookupBox preserves compatible list definitions and cache data where possible, but does not carry old connection credentials into the current settings key. The user reconnects through Google OAuth.
+
 ## Google auth adapter
 
 The extension requests:
@@ -45,7 +45,7 @@ The extension requests:
 
 Chrome uses the platform-native Identity API token cache and expiration handling through `chrome.identity.getAuthToken()`.
 
-Firefox does not expose Chrome's `getAuthToken()` API. The current development bridge isolates its `identity.launchWebAuthFlow()` implementation behind the same adapter. It uses a fixed Gecko extension ID so the redirect URL stays stable across temporary installs. The Firefox bridge is intentionally marked development-only until the public-release authorization design is hardened.
+Firefox does not expose Chrome's `getAuthToken()` API. The current development bridge isolates its `identity.launchWebAuthFlow()` implementation behind the same adapter and uses a fixed Gecko extension ID plus loopback redirect. The Firefox bridge is intentionally marked development-only until the public-release authorization design is hardened.
 
 OAuth client IDs are build-time application configuration and are not end-user secrets or user settings.
 
@@ -68,10 +68,14 @@ Sync flow:
 
 ## Provider abstraction
 
-Google Sheets direct API, the legacy GAS path, SQLite, CSV, and future sources remain behind provider boundaries so the search UI stays source-agnostic.
+Google Sheets API, SQLite, CSV, and future sources remain behind provider boundaries so the search UI stays source-agnostic.
+
+## Artifact security boundary
+
+CI unpacks both browser package ZIPs and rejects a build if it contains the previous gateway host permissions or runtime setup strings. This makes the OAuth-only distribution boundary executable rather than documentation-only.
 
 ## Public-distribution direction
 
-The initial direct OAuth implementation uses `spreadsheets.readonly`, which Google classifies as a sensitive scope. This is appropriate for a controlled development/testing phase but public distribution requires OAuth verification or a narrower permission model.
+The initial direct OAuth implementation uses `spreadsheets.readonly`, which Google classifies as a sensitive scope. This is appropriate for controlled development/testing, but public distribution requires OAuth verification or a narrower permission model.
 
-The later public-release milestone should evaluate Google Picker + `drive.file` or another least-privilege design while preserving the current list model and UI.
+The public-release milestone should evaluate Google Picker + `drive.file` or another least-privilege design while preserving the current list model and UI.

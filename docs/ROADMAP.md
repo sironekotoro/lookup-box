@@ -2,7 +2,7 @@
 
 ## Completed baseline
 
-- [x] Google Sheet URL based lookup via GAS
+- [x] Initial Google Sheet lookup prototype
 - [x] Generic header-driven search
 - [x] One-click copy
 - [x] Popup re-sync
@@ -31,16 +31,21 @@
 - [x] Direct Google Sheets API provider
 - [x] Read Spreadsheet metadata directly
 - [x] Read formatted cell values directly
-- [x] Keep existing multi-list definitions during GAS → OAuth migration
-- [x] Move GAS URL / API Token out of the normal settings flow
-- [x] Fixed Firefox extension ID for a stable redirect URL
-- [x] CI support for build-time OAuth client IDs
-- [ ] Create Google Cloud OAuth consent configuration for development
-- [ ] Create Chrome Extension OAuth client and set `WXT_GOOGLE_CHROME_CLIENT_ID`
-- [ ] Create Firefox development OAuth client and set `WXT_GOOGLE_FIREFOX_CLIENT_ID`
-- [ ] Runtime smoke test direct OAuth in Chrome
-- [ ] Runtime smoke test direct OAuth in Firefox
-- [ ] Remove GAS dependency from the default shipped artifacts after OAuth smoke tests pass
+- [x] Google Cloud OAuth consent configuration for development
+- [x] Chrome Extension OAuth client configured in CI
+- [x] Firefox development OAuth client configured in CI
+- [x] Runtime smoke test direct OAuth in Chrome
+- [x] Runtime smoke test direct OAuth in Firefox
+- [x] Preserve compatible list definitions during old-settings migration
+
+## OAuth-only distribution milestone
+
+- [x] Remove old gateway host permissions from Chrome / Firefox manifests
+- [x] Remove old gateway settings from normal UI
+- [x] Remove runtime gateway provider from standard extension source path
+- [x] Migrate settings to OAuth-only schema and discard old connection credentials
+- [x] Add CI package audit for forbidden gateway runtime strings/permissions
+- [x] Keep historical gateway code only as repository reference material
 
 ## Public distribution hardening
 
@@ -49,12 +54,13 @@
 - [ ] Replace/validate Firefox development auth bridge with public-release-safe authorization flow
 - [ ] Privacy / permission documentation
 - [ ] Firefox `data_collection_permissions` declaration
-- [ ] Stable Chrome production extension ID
+- [ ] Stable Chrome production extension ID / Web Store identity strategy
 - [ ] Firefox store publication
 - [ ] Chrome Web Store publication
 
 ## Later
 
+- [ ] Per-list sync timestamp
 - [ ] SQLite file picker UI
 - [ ] CSV provider
 - [ ] Import/export of LookupBox settings

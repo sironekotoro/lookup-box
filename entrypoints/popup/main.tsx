@@ -63,7 +63,7 @@ function App() {
 
         bundles = [];
         for (const list of settings.lists) {
-          const provider = makeGoogleSourceProvider(settings, listLoadOptions(list));
+          const provider = makeGoogleSourceProvider(listLoadOptions(list));
           const loaded = await provider.load();
           const source = loaded[0];
           if (!source) throw new Error(`${list.spreadsheetTitle} / ${list.sheetName} を読み込めませんでした。`);
