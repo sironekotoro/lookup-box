@@ -2,16 +2,20 @@
 
 LookupBox turns reference lists into a small, fast browser lookup tool.
 
-Current MVP: Google Sheets via a thin GAS gateway. Planned: direct Google OAuth, multiple lists, SQLite and CSV.
+Current MVP: multiple Google Sheet-backed lookup lists via a thin GAS gateway. Planned: direct Google OAuth, SQLite and CSV.
 
 ## Current features
 
-- Search every configured column incrementally
+- Register multiple Google Sheet lookup lists
+- Choose Sheet, key column, and value column per list
+- Derive list names automatically from Spreadsheet metadata
+- Search key/value columns incrementally
+- Switch lists from the popup or search all lists together
 - Copy values with one click
-- Re-sync from the popup
+- Re-sync all registered lists from the popup
 - Show last sync time
-- Google Sheet URL based source selection
 - Chrome and Firefox builds from one WXT codebase
+- Legacy single-list settings migration
 
 ## Development
 
@@ -41,11 +45,7 @@ WXT supports browser-specific targets through `-b chrome` and `-b firefox`.
 
 The usage site lives in `site/` and is deployed by `.github/workflows/pages.yml`.
 
-After creating the repository, open:
-
-`Settings -> Pages -> Build and deployment -> Source -> GitHub Actions`
-
-Expected project site:
+Project site:
 
 `https://sironekotoro.github.io/lookup-box/`
 
