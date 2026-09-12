@@ -8,12 +8,13 @@ Chrome / Firefox distribution artifacts use four numeric components:
 
 `0.<feature-line>.<YY>.<MDD>`
 
-Example for the OAuth-only feature line released on 2026-09-13:
+Examples:
 
-`0.4.26.913`
+- OAuth-only feature line released on 2026-09-13: `0.4.26.913`
+- Official icon feature line on the same day: `0.5.26.913`
 
 - `0`: pre-1.0 major version
-- `4`: feature/release line
+- feature line: incremented for a new release line or another official build on the same day
 - `26`: two-digit year
 - `913`: month/day without a leading zero (`MDD` or `MMDD`)
 
@@ -23,7 +24,7 @@ The canonical value lives in `wxt.config.ts` as `EXTENSION_VERSION`. CI checks t
 
 ## npm package version
 
-`package.json` stays valid SemVer (for example `0.4.0`). It is development/package metadata and does not have to match the four-component browser-extension version.
+`package.json` stays valid SemVer (for example `0.5.0`). It is development/package metadata and does not have to match the four-component browser-extension version.
 
 ## Release rule
 
