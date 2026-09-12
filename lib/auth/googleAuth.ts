@@ -38,6 +38,13 @@ export function makeOAuthState(bytes = 18): string {
   return Array.from(data, (value) => value.toString(16).padStart(2, '0')).join('');
 }
 
+export function makeFirefoxLoopbackRedirectUrl(identityRedirectUrl: string): string {
+  const url = new URL(identityRedirectUrl);
+  const subdomain = url.hostname.split('.')[0]?.trim();
+  if (!subdomain) throw new Error('Firefox OAuth redirect URLを生成できませんでした。');
+  return `http://127.0.0.1/mozoauth2/${encodeURIComponent(subdomain)}`;
+}
+
 export function buildFirefoxGoogleAuthUrl(
   clientId: string,
   redirectUrl: string,
@@ -113,7 +120,8 @@ async function getFirefoxAccessToken(interactive: boolean): Promise<string> {
   const clientId = configuredClientId();
   if (!clientId) throw new Error('Firefox用Google OAuth Client IDがこのビルドに設定されていません。');
 
-  const redirectUrl = browser.identity.getRedirectURL();
+  const identityRedirectUrl = browser.identity.getRedirectURL();
+  const redirectUrl = makeFirefoxLoopbackRedirectUrl(identityRedirectUrl);
   const state = makeOAuthState();
   const authUrl = buildFirefoxGoogleAuthUrl(clientId, redirectUrl, state, interactive);
   const finalUrl = await (browser.identity as any).launchWebAuthFlow({
@@ -165,7 +173,10 @@ export async function clearGoogleAuth(): Promise<void> {
 export function getGoogleAuthRuntimeInfo(): GoogleAuthRuntimeInfo {
   let redirectUrl: string | undefined;
   try {
-    redirectUrl = browser.identity?.getRedirectURL?.();
+    const identityRedirectUrl = browser.identity?.getRedirectURL?.();
+    redirectUrl = currentBrowser() === 'firefox' && identityRedirectUrl
+      ? makeFirefoxLoopbackRedirectUrl(identityRedirectUrl)
+      : identityRedirectUrl;
   } catch {
     redirectUrl = undefined;
   }
