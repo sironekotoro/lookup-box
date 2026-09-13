@@ -49,14 +49,40 @@
 
 ## Public distribution hardening
 
-- [ ] Google OAuth verification for public distribution or narrower scope design
-- [ ] Google Picker + `drive.file` evaluation for least-privilege public distribution
-- [ ] Replace/validate Firefox development auth bridge with public-release-safe authorization flow
-- [ ] Privacy / permission documentation
-- [ ] Firefox `data_collection_permissions` declaration
-- [ ] Stable Chrome production extension ID / Web Store identity strategy
-- [ ] Firefox store publication
-- [ ] Chrome Web Store publication
+### Distribution baseline
+
+- [x] Privacy policy source document
+- [x] Public privacy policy page prepared for GitHub Pages
+- [x] Chrome / Firefox store listing draft
+- [x] Permission justification draft
+- [x] Public release checklist
+- [ ] Re-verify disclosures after final auth design is frozen
+
+### Least-privilege Google access
+
+- [ ] Prototype Google Picker + `drive.file`
+- [ ] Prove selected-file-only access
+- [ ] Prove Sheets API metadata/value reads still work with the per-file grant
+- [ ] Preserve multi-list registration/resync and formatted values
+- [ ] Decide final Chrome public authorization flow
+
+### Production Firefox authorization
+
+- [ ] Remove the development implicit-flow bridge from public builds
+- [ ] Implement/validate Google-supported public-client authorization using PKCE where applicable
+- [ ] Test token expiry, revoke, reconnect, and account switching
+- [ ] Finalize Firefox `data_collection_permissions` against the frozen data flow
+
+### Store submission
+
+- [ ] Confirm stable Chrome Web Store production extension ID / OAuth client pairing
+- [ ] Complete Google OAuth verification only if still required by the final scope design
+- [ ] Prepare AMO source package/reviewer notes if required
+- [ ] Complete Chrome Web Store Store Listing and Privacy tabs
+- [ ] Firefox Add-ons submission
+- [ ] Chrome Web Store submission
+
+See `docs/PUBLIC_DISTRIBUTION.md` and Issue #9 for the detailed acceptance criteria.
 
 ## Later
 
