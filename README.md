@@ -50,13 +50,25 @@ OAuth client IDs are build-time configuration, not end-user settings.
 - Chrome: `WXT_GOOGLE_CHROME_CLIENT_ID`
 - Firefox development bridge: `WXT_GOOGLE_FIREFOX_CLIENT_ID`
 
-The extension requests the read-only Sheets scope:
+The extension currently requests the read-only Sheets scope:
 
 `https://www.googleapis.com/auth/spreadsheets.readonly`
 
 Normal users install LookupBox, click **Googleに接続**, paste a Google Sheet URL, and register the list. No GAS URL or API Token is present in the standard build.
 
-See `docs/OAUTH_SETUP.md` for the one-time Google Cloud development setup.
+Public distribution hardening is in progress. The current broad read-only Sheets scope and Firefox development auth bridge are not treated as the final public-store authorization design; see `docs/PUBLIC_DISTRIBUTION.md`.
+
+See `docs/OAUTH_SETUP.md` for the development Google Cloud setup.
+
+## Privacy
+
+LookupBox keeps registered list definitions and synchronized rows in browser-local extension storage. Popup search terms are processed locally and are not sent to the developer or to an analytics service.
+
+Privacy policy:
+
+`https://sironekotoro.github.io/lookup-box/privacy.html`
+
+Source: `docs/PRIVACY.md`
 
 ## Versioning
 
@@ -87,6 +99,17 @@ Project site:
 
 `https://sironekotoro.github.io/lookup-box/`
 
+Privacy policy:
+
+`https://sironekotoro.github.io/lookup-box/privacy.html`
+
+## Public distribution
+
+Store submission work is tracked in `docs/PUBLIC_DISTRIBUTION.md` and Issue #9. Draft listing text and the release checklist live in:
+
+- `docs/STORE_LISTING.md`
+- `docs/RELEASE_CHECKLIST.md`
+
 ## Historical GAS reference
 
 The previous gateway implementation remains in `gas/Code.gs` for historical/reference purposes only. Standard extension builds do not import it, expose its settings, or request its host permissions.
@@ -97,6 +120,10 @@ See:
 
 - `docs/ARCHITECTURE.md`
 - `docs/OAUTH_SETUP.md`
+- `docs/PUBLIC_DISTRIBUTION.md`
+- `docs/PRIVACY.md`
+- `docs/STORE_LISTING.md`
+- `docs/RELEASE_CHECKLIST.md`
 - `docs/VERSIONING.md`
 - `docs/ROADMAP.md`
 - `AGENTS.md`
