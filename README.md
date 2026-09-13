@@ -56,7 +56,7 @@ The extension currently requests the read-only Sheets scope:
 
 Normal users install LookupBox, click **Googleに接続**, paste a Google Sheet URL, and register the list. No GAS URL or API Token is present in the standard build.
 
-Public distribution hardening is in progress. The current broad read-only Sheets scope and Firefox development auth bridge are not treated as the final public-store authorization design; see `docs/PUBLIC_DISTRIBUTION.md`.
+Public distribution hardening is in progress. The current broad read-only Sheets scope and Firefox development auth bridge are not treated as the final public-store authorization design; see `docs/PUBLIC_DISTRIBUTION.md` and Issue #11.
 
 See `docs/OAUTH_SETUP.md` for the development Google Cloud setup.
 
@@ -64,11 +64,13 @@ See `docs/OAUTH_SETUP.md` for the development Google Cloud setup.
 
 LookupBox keeps registered list definitions and synchronized rows in browser-local extension storage. Popup search terms are processed locally and are not sent to the developer or to an analytics service.
 
-Privacy policy:
+Development/public-documentation privacy page:
 
 `https://sironekotoro.github.io/lookup-box/privacy.html`
 
 Source: `docs/PRIVACY.md`
+
+For production Google OAuth branding/verification, the homepage and privacy policy will be served from a verified custom domain controlled by the developer. The default `github.io` project URL is not treated as the final OAuth verification domain.
 
 ## Versioning
 
@@ -95,17 +97,17 @@ The build remains valid when those variables are absent; OAuth is simply reporte
 
 The usage site lives in `site/` and is deployed by `.github/workflows/pages.yml`.
 
-Project site:
+Development/public documentation site:
 
 `https://sironekotoro.github.io/lookup-box/`
 
-Privacy policy:
+Privacy policy page:
 
 `https://sironekotoro.github.io/lookup-box/privacy.html`
 
 ## Public distribution
 
-Store submission work is tracked in `docs/PUBLIC_DISTRIBUTION.md` and Issue #9. Draft listing text and the release checklist live in:
+Store submission work is tracked in `docs/PUBLIC_DISTRIBUTION.md` and Issue #9. The least-privilege authorization spike is tracked in Issue #11. Draft listing text and the release checklist live in:
 
 - `docs/STORE_LISTING.md`
 - `docs/RELEASE_CHECKLIST.md`
