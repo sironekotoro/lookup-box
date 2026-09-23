@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  activeLookupBundles,
   createLookupList,
   getLookupListDisplayName,
   makeLookupListId,
@@ -17,6 +18,21 @@ const inspection: SpreadsheetInspection = {
 };
 
 describe('lookup list helpers', () => {
+  it('only searches registered lists after leaving demo mode', () => {
+    const list = createLookupList(inspection, inspection.spreadsheetId, 'US', 'Name', 'Code');
+    const demo: DatasetBundle = {
+      definition: {
+        dataset_id: 'companies', display_name: 'Demo', sheet_name: 'companies',
+        search_columns: ['Name'], display_columns: ['Name'], copy_columns: ['Name'],
+        primary_key: 'Name', enabled: true, provider: 'mock'
+      },
+      rows: [{ Name: 'Apple' }]
+    };
+    const google = mapBundleToLookupList({ ...demo, definition: { ...demo.definition, provider: 'google_sheets' } }, list, [list]);
+    expect(activeLookupBundles([demo, google], [list])).toEqual([google]);
+    expect(activeLookupBundles([demo, google], [list], true)).toEqual([demo]);
+  });
+
   it('creates a stable list identity from source and columns', () => {
     const first = makeLookupListId(inspection.spreadsheetId, 'US', 'Name', 'Code');
     const second = makeLookupListId(inspection.spreadsheetId, 'US', 'Name', 'Code');

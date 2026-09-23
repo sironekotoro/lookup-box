@@ -79,6 +79,16 @@ export function mapBundleToLookupList(
   };
 }
 
+export function activeLookupBundles(
+  bundles: DatasetBundle[],
+  lists: LookupList[],
+  useMock = false
+): DatasetBundle[] {
+  if (useMock) return bundles.filter((bundle) => bundle.definition.provider === 'mock');
+  const activeIds = new Set(lists.map((list) => list.id));
+  return bundles.filter((bundle) => activeIds.has(bundle.definition.dataset_id));
+}
+
 export function applyLookupListDisplayNames(
   bundles: DatasetBundle[],
   lists: LookupList[]
