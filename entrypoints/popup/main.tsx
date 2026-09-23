@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { DatasetBundle } from '../../lib/types';
-import { mapBundleToLookupList } from '../../lib/lists';
+import { activeLookupBundles, mapBundleToLookupList } from '../../lib/lists';
 import { loadCache, loadSettings, saveCache } from '../../lib/storage';
 import { searchDatasets } from '../../lib/search';
 import { listLoadOptions, makeGoogleSourceProvider } from '../../lib/providers/googleSource';
@@ -28,7 +28,11 @@ function App() {
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState('');
 
-  useEffect(() => { loadCache().then(setCache); }, []);
+  useEffect(() => {
+    Promise.all([loadSettings(), loadCache()]).then(([settings, stored]) => {
+      setCache({ ...stored, bundles: activeLookupBundles(stored.bundles, settings.lists, settings.useMock) });
+    });
+  }, []);
 
   useEffect(() => {
     if (datasetId && !cache.bundles.some((bundle) => bundle.definition.dataset_id === datasetId)) {
@@ -100,6 +104,7 @@ function App() {
       </header>
 
       <div className="meta">{cache.bundles.length}リスト / {count}件 / 最終同期 {formatSyncedAt(cache.syncedAt)}</div>
+      {cache.bundles.length > 1 && <div className="meta">検索対象: {datasetId ? cache.bundles.find((bundle) => bundle.definition.dataset_id === datasetId)?.definition.display_name : 'すべてのリスト'}</div>}
       {status && <div className="status">{status}</div>}
 
       {cache.bundles.length > 1 && (
