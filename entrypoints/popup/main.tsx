@@ -9,6 +9,26 @@ import { MockProvider } from '../../lib/providers/mockProvider';
 import './style.css';
 
 type CacheState = { bundles: DatasetBundle[]; syncedAt?: string };
+const DEMO_ENABLED = import.meta.env.DEV || import.meta.env.WXT_ENABLE_DEMO === 'true';
+
+async function loadSelectedSource(): Promise<DatasetBundle[]> {
+  const settings = await loadSettings();
+
+  if (settings.lists.length > 0) {
+    const bundles: DatasetBundle[] = [];
+    for (const list of settings.lists) {
+      const provider = makeGoogleSourceProvider(listLoadOptions(list));
+      const loaded = await provider.load();
+      const source = loaded[0];
+      if (!source) throw new Error(`${list.spreadsheetTitle} / ${list.sheetName} を読み込めませんでした。`);
+      bundles.push(mapBundleToLookupList(source, list, settings.lists));
+    }
+    return bundles;
+  }
+
+  if (DEMO_ENABLED && settings.useMock) return new MockProvider().load();
+  throw new Error('設定画面でGoogle Sheetを登録してください。');
+}
 
 function formatSyncedAt(value?: string): string {
   if (!value) return '未同期';
@@ -29,9 +49,43 @@ function App() {
   const [status, setStatus] = useState('');
 
   useEffect(() => {
-    Promise.all([loadSettings(), loadCache()]).then(([settings, stored]) => {
-      setCache({ ...stored, bundles: activeLookupBundles(stored.bundles, settings.lists, settings.useMock) });
-    });
+    let cancelled = false;
+    Promise.all([loadSettings(), loadCache()])
+      .then(async ([settings, stored]) => {
+        const active = activeLookupBundles(
+          stored.bundles,
+          settings.lists,
+          DEMO_ENABLED && settings.useMock
+        );
+        if (settings.lists.length === 0 || active.length > 0) {
+          if (!cancelled) setCache({ ...stored, bundles: active });
+          return;
+        }
+
+        if (!cancelled) {
+          setSyncing(true);
+          setStatus('登録済みのGoogle Sheetを復旧しています...');
+        }
+        const bundles = await loadSelectedSource();
+        await saveCache(bundles);
+        const next = await loadCache();
+        if (!cancelled) {
+          setCache(next);
+          const rows = bundles.reduce((n, bundle) => n + bundle.rows.length, 0);
+          setStatus(`✓ ${bundles.length}リスト / ${rows}件を同期`);
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : String(error);
+        setStatus(message.includes('再認証')
+          ? `${message} 設定を開いてGoogleに接続してください。`
+          : message);
+      })
+      .finally(() => {
+        if (!cancelled) setSyncing(false);
+      });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -55,25 +109,7 @@ function App() {
     setSyncing(true);
     setStatus('同期中...');
     try {
-      const settings = await loadSettings();
-      let bundles: DatasetBundle[];
-
-      if (settings.useMock) {
-        bundles = await new MockProvider().load();
-      } else {
-        if (settings.lists.length === 0) {
-          throw new Error('設定画面でGoogle Sheetを登録してください。');
-        }
-
-        bundles = [];
-        for (const list of settings.lists) {
-          const provider = makeGoogleSourceProvider(listLoadOptions(list));
-          const loaded = await provider.load();
-          const source = loaded[0];
-          if (!source) throw new Error(`${list.spreadsheetTitle} / ${list.sheetName} を読み込めませんでした。`);
-          bundles.push(mapBundleToLookupList(source, list, settings.lists));
-        }
-      }
+      const bundles = await loadSelectedSource();
 
       await saveCache(bundles);
       const next = await loadCache();

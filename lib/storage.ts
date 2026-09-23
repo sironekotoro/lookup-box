@@ -46,9 +46,10 @@ function isLookupList(value: unknown): value is LookupList {
 export function normalizeSettings(raw: unknown, cache?: Partial<CacheValue>): LookupSettings {
   const source = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
   if (Array.isArray(source.lists)) {
+    const lists = source.lists.filter(isLookupList);
     return {
-      useMock: source.useMock === true,
-      lists: source.lists.filter(isLookupList),
+      useMock: source.useMock === true && lists.length === 0,
+      lists,
       legacySpreadsheetUrl: text(source.legacySpreadsheetUrl),
       legacySheetName: text(source.legacySheetName)
     };

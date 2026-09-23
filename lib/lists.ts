@@ -84,7 +84,11 @@ export function activeLookupBundles(
   lists: LookupList[],
   useMock = false
 ): DatasetBundle[] {
-  if (useMock) return bundles.filter((bundle) => bundle.definition.provider === 'mock');
+  // A configured Google Sheet is always the source of truth. Demo mode is only
+  // available before the user has registered a list.
+  if (lists.length === 0 && useMock) {
+    return bundles.filter((bundle) => bundle.definition.provider === 'mock');
+  }
   const activeIds = new Set(lists.map((list) => list.id));
   return bundles.filter((bundle) => activeIds.has(bundle.definition.dataset_id));
 }

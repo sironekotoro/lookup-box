@@ -66,4 +66,22 @@ describe('settings migration', () => {
     expect(normalized.lists[0]?.spreadsheetTitle).toBe('Stocks');
     expect(normalized.useMock).toBe(false);
   });
+
+  it('disables stale demo mode when a Google Sheet list is registered', () => {
+    const normalized = normalizeSettings({
+      useMock: true,
+      lists: [{
+        id: 'list-1',
+        spreadsheetId: 'sheet-id',
+        spreadsheetUrl: 'sheet-url',
+        spreadsheetTitle: 'Lookup Sample',
+        sheetName: 'customers',
+        keyColumn: 'customer_name',
+        valueColumn: 'customer_code'
+      }]
+    });
+
+    expect(normalized.useMock).toBe(false);
+    expect(normalized.lists).toHaveLength(1);
+  });
 });

@@ -27,6 +27,8 @@ import {
 } from '../../lib/providers/googleSource';
 import { MockProvider } from '../../lib/providers/mockProvider';
 
+const DEMO_ENABLED = import.meta.env.DEV || import.meta.env.WXT_ENABLE_DEMO === 'true';
+
 function initialSettings(): LookupSettings {
   return { lists: [] };
 }
@@ -103,6 +105,11 @@ function App() {
   }
 
   async function useDemo() {
+    if (!DEMO_ENABLED) return;
+    if (settings.lists.length > 0) {
+      setMessage('登録済みのGoogle Sheetがあるため、デモデータには切り替えません。');
+      return;
+    }
     setBusy(true);
     try {
       const bundles = await new MockProvider().load();
@@ -291,7 +298,7 @@ function App() {
         setValueColumn('');
       }}/></label></p>
       <button disabled={busy || !draftUrl} onClick={inspectSheet}>{busy ? '処理中...' : 'Sheetを確認'}</button>{' '}
-      <button disabled={busy} onClick={useDemo}>デモで試す</button>
+      {DEMO_ENABLED && settings.lists.length === 0 && <button disabled={busy} onClick={useDemo}>デモで試す</button>}
 
       {inspection && (
         <section style={{marginTop:20, padding:14, border:'1px solid #ddd', borderRadius:8}}>
