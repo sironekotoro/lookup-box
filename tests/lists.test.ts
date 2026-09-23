@@ -18,7 +18,7 @@ const inspection: SpreadsheetInspection = {
 };
 
 describe('lookup list helpers', () => {
-  it('only searches registered lists after leaving demo mode', () => {
+  it('always gives registered lists priority over stale demo mode', () => {
     const list = createLookupList(inspection, inspection.spreadsheetId, 'US', 'Name', 'Code');
     const demo: DatasetBundle = {
       definition: {
@@ -30,7 +30,8 @@ describe('lookup list helpers', () => {
     };
     const google = mapBundleToLookupList({ ...demo, definition: { ...demo.definition, provider: 'google_sheets' } }, list, [list]);
     expect(activeLookupBundles([demo, google], [list])).toEqual([google]);
-    expect(activeLookupBundles([demo, google], [list], true)).toEqual([demo]);
+    expect(activeLookupBundles([demo, google], [list], true)).toEqual([google]);
+    expect(activeLookupBundles([demo], [], true)).toEqual([demo]);
   });
 
   it('creates a stable list identity from source and columns', () => {
