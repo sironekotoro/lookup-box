@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { LookupList, SpreadsheetInspection } from '../../lib/types';
 import {
+  activeLookupBundles,
   applyLookupListDisplayNames,
   createLookupList,
   getLookupListDisplayName,
@@ -160,7 +161,8 @@ function App() {
       const nextLists = [...settings.lists.filter((candidate) => candidate.id !== list.id), list];
       const bundle = await loadListBundle(list, nextLists);
       const cache = await loadCache();
-      const retained = cache.bundles.filter((candidate) => candidate.definition.dataset_id !== list.id);
+      const retained = activeLookupBundles(cache.bundles, settings.lists)
+        .filter((candidate) => candidate.definition.dataset_id !== list.id);
       await saveCache(applyLookupListDisplayNames([...retained, bundle], nextLists));
 
       const next: LookupSettings = {
@@ -191,7 +193,8 @@ function App() {
     try {
       const bundle = await loadListBundle(list, settings.lists);
       const cache = await loadCache();
-      const retained = cache.bundles.filter((candidate) => candidate.definition.dataset_id !== list.id);
+      const retained = activeLookupBundles(cache.bundles, settings.lists)
+        .filter((candidate) => candidate.definition.dataset_id !== list.id);
       await saveCache(applyLookupListDisplayNames([...retained, bundle], settings.lists));
       const next = { ...settings, useMock: false };
       await saveSettings(next);
@@ -210,7 +213,7 @@ function App() {
     const next = { ...settings, lists: nextLists, useMock: false };
     const cache = await loadCache();
     await saveCache(applyLookupListDisplayNames(
-      cache.bundles.filter((bundle) => bundle.definition.dataset_id !== listId),
+      activeLookupBundles(cache.bundles, nextLists),
       nextLists
     ));
     await saveSettings(next);
@@ -260,6 +263,7 @@ function App() {
       </section>
 
       <h2>登録済みリスト</h2>
+      <p>登録済みの全リストが検索対象です。不要なサンプルのリストはここで削除してください。</p>
       {settings.lists.length === 0 ? (
         <p style={{color:'#666'}}>まだ登録されていません。</p>
       ) : (
@@ -268,6 +272,7 @@ function App() {
             <div key={list.id} style={{border:'1px solid #ddd', borderRadius:8, padding:12}}>
               <strong>{getLookupListDisplayName(list, settings.lists)}</strong>
               <div style={{color:'#666', fontSize:14}}>{list.sheetName} / {list.keyColumn} → {list.valueColumn}</div>
+              <div style={{color:'#666', fontSize:12, overflowWrap:'anywhere'}}>{list.spreadsheetUrl}</div>
               <div style={{marginTop:8}}>
                 <button disabled={busy} onClick={()=>syncList(list)}>再同期</button>{' '}
                 <button disabled={busy} onClick={()=>removeList(list.id)}>削除</button>
@@ -278,7 +283,13 @@ function App() {
       )}
 
       <h2>Google Sheetを追加</h2>
-      <p><label>Google Sheet URL<br/><input placeholder="https://docs.google.com/spreadsheets/d/..." style={{width:'100%', padding:8}} value={draftUrl} onChange={(e)=>setDraftUrl(e.target.value)}/></label></p>
+      <p><label>Google Sheet URL<br/><input placeholder="https://docs.google.com/spreadsheets/d/..." style={{width:'100%', padding:8}} value={draftUrl} onChange={(e)=>{
+        setDraftUrl(e.target.value);
+        setInspection(null);
+        setSheetName('');
+        setKeyColumn('');
+        setValueColumn('');
+      }}/></label></p>
       <button disabled={busy || !draftUrl} onClick={inspectSheet}>{busy ? '処理中...' : 'Sheetを確認'}</button>{' '}
       <button disabled={busy} onClick={useDemo}>デモで試す</button>
 
