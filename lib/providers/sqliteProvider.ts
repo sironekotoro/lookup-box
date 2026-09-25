@@ -44,7 +44,7 @@ export class LocalSqliteProvider implements LookupProvider {
     if (result[0]) {
       const { columns, values } = result[0];
       for (const valueRow of values) {
-        const row: LookupRow = {};
+        const row: LookupRow = Object.create(null);
         columns.forEach((column, i) => {
           row[column] = valueRow[i] == null ? '' : String(valueRow[i]);
         });

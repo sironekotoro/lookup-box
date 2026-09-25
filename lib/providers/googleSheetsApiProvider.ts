@@ -68,11 +68,20 @@ function validateColumns(headers: string[], required: string[], sheetName: strin
   }
 }
 
+function validateHeaders(headers: string[], sheetName: string): void {
+  const seen = new Set<string>();
+  for (const header of headers) {
+    if (!header) continue;
+    if (seen.has(header)) throw new Error(`${sheetName}: 列名「${header}」が重複しています。1行目の見出しを変更してください。`);
+    seen.add(header);
+  }
+}
+
 function rowsFromValues(headers: string[], values: string[][], selected: Set<string>): Record<string, string>[] {
   return values
     .filter((row) => row.some((value) => value.trim() !== ''))
     .map((row) => {
-      const record: Record<string, string> = {};
+      const record: Record<string, string> = Object.create(null);
       headers.forEach((header, index) => {
         if (!header || !selected.has(header)) return;
         record[header] = row[index] ?? '';
@@ -114,6 +123,7 @@ export class GoogleSheetsApiProvider implements LookupProvider {
       const ranges = batch.valueRanges ?? [];
       visibleSheets.forEach((sheet, index) => {
         const headers = stringRows(ranges[index]?.values)[0] ?? [];
+        validateHeaders(headers, sheet.title!);
         if (headers.some((header) => header.trim() !== '')) {
           inspections.push({ name: sheet.title!, headers });
         }
@@ -145,6 +155,7 @@ export class GoogleSheetsApiProvider implements LookupProvider {
     if (values.length === 0) throw new Error(`Sheetが空です: ${this.simpleOptions.sheetName}`);
 
     const headers = values[0] ?? [];
+    validateHeaders(headers, this.simpleOptions.sheetName);
     if (!headers.some((header) => header.trim() !== '')) {
       throw new Error(`1行目に列名がありません: ${this.simpleOptions.sheetName}`);
     }

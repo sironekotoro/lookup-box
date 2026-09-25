@@ -6,6 +6,7 @@ const CACHE_KEY = 'lookup.cache.v2';
 const LEGACY_SETTINGS_V2_KEY = 'lookup.settings.v2';
 const LEGACY_SETTINGS_V3_KEY = 'lookup.settings.v3';
 const SETTINGS_KEY = 'lookup.settings.v4';
+const DISCONNECTED_KEY = 'lookup.google.disconnected';
 
 export interface LookupSettings {
   useMock?: boolean;
@@ -115,6 +116,19 @@ export async function saveCache(bundles: DatasetBundle[]): Promise<void> {
   });
 }
 
+export async function clearCache(): Promise<void> {
+  await browser.storage.local.remove(CACHE_KEY);
+}
+
+export async function isGoogleDisconnected(): Promise<boolean> {
+  const result = await browser.storage.local.get(DISCONNECTED_KEY);
+  return result[DISCONNECTED_KEY] === true;
+}
+
+export async function setGoogleDisconnected(disconnected: boolean): Promise<void> {
+  await browser.storage.local.set({ [DISCONNECTED_KEY]: disconnected });
+}
+
 async function saveCacheValue(value: CacheValue): Promise<void> {
   await browser.storage.local.set({ [CACHE_KEY]: value });
 }
@@ -150,6 +164,10 @@ export async function loadSettings(): Promise<LookupSettings> {
   const current = result[SETTINGS_KEY];
   if (current) {
     const normalized = normalizeSettings(current);
+    if (Array.isArray((current as LookupSettings).lists)
+      && normalized.lists.length !== (current as LookupSettings).lists.length) {
+      throw new Error('保存済みリストの一部が読み取れません。元の設定を保持しました。設定を修復してから再度開いてください。');
+    }
     if (JSON.stringify(current) !== JSON.stringify(normalized)) await saveSettings(normalized);
     return normalized;
   }

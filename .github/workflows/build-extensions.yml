@@ -26,13 +26,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        shell: bash
-        run: |
-          if [[ -f package-lock.json ]]; then
-            npm ci
-          else
-            npm install --no-audit --no-fund
-          fi
+        run: npm ci --no-audit --no-fund
 
       - name: Typecheck
         run: npm run typecheck

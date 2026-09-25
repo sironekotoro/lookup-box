@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadCache, loadSettings, normalizeSettings } from '../lib/storage';
+import { clearCache, isGoogleDisconnected, loadCache, loadSettings, normalizeSettings, setGoogleDisconnected } from '../lib/storage';
 import type { DatasetBundle } from '../lib/types';
 
 const legacyBundle: DatasetBundle = {
@@ -135,5 +135,28 @@ describe('settings migration', () => {
     expect(values['lookup.settings.v4']).toEqual(settings);
     expect(cache.bundles[0]?.definition.dataset_id).toBe('original-list');
     expect(cache.bundles[0]?.rows).toEqual([{ Name: 'Apple', Code: 'AAPL' }]);
+  });
+
+  it('does not overwrite settings with an invalid list', async () => {
+    const original = { lists: [{ id: 'broken', spreadsheetId: 'sheet' }] };
+    const set = vi.fn();
+    vi.stubGlobal('browser', { storage: { local: {
+      async get() { return { 'lookup.settings.v4': original }; }, set, async remove() {}
+    } } });
+    await expect(loadSettings()).rejects.toThrow('元の設定を保持');
+    expect(set).not.toHaveBeenCalled();
+  });
+
+  it('keeps a disconnect marker while deleting cached rows', async () => {
+    const values: Record<string, unknown> = { 'lookup.cache.v2': { bundles: [legacyBundle] } };
+    vi.stubGlobal('browser', { storage: { local: {
+      async get(key: string) { return { [key]: values[key] }; },
+      async set(update: Record<string, unknown>) { Object.assign(values, update); },
+      async remove(key: string) { delete values[key]; }
+    } } });
+    await setGoogleDisconnected(true);
+    await clearCache();
+    expect(await isGoogleDisconnected()).toBe(true);
+    expect((await loadCache()).bundles).toEqual([]);
   });
 });

@@ -71,6 +71,29 @@ describe('GoogleSheetsApiProvider', () => {
     ]);
   });
 
+  it('keeps __proto__ as an ordinary cell value', async () => {
+    const provider = new GoogleSheetsApiProvider({
+      spreadsheetUrl: '1Abc_def-XYZ1234567890', sheetName: 'US',
+      searchColumns: ['__proto__'], displayColumns: ['__proto__'], copyColumns: []
+    }, tokenSource, async () => jsonResponse({ values: [['__proto__'], ['safe value']] }));
+    const row = (await provider.load())[0]!.rows[0]!;
+    expect(Object.getOwnPropertyDescriptor(row, '__proto__')?.value).toBe('safe value');
+    expect(searchDatasets((await provider.load()), 'safe')[0]?.row['__proto__']).toBe('safe value');
+  });
+
+  it('rejects duplicate headers during inspection and loading', async () => {
+    const provider = new GoogleSheetsApiProvider({
+      spreadsheetUrl: '1Abc_def-XYZ1234567890', sheetName: 'US',
+      searchColumns: ['Name'], displayColumns: ['Name']
+    }, tokenSource, async (input) => String(input).includes('values:batchGet')
+      ? jsonResponse({ valueRanges: [{ values: [['Name', 'Name']] }] })
+      : String(input).includes('/values/')
+        ? jsonResponse({ values: [['Name', 'Name'], ['A', 'B']] })
+        : jsonResponse({ sheets: [{ properties: { title: 'US' } }] }));
+    await expect(provider.inspect('1Abc_def-XYZ1234567890')).rejects.toThrow('重複');
+    await expect(provider.load()).rejects.toThrow('重複');
+  });
+
   it('supports four columns, search-only fields, display order and an empty copy selection', async () => {
     const spreadsheetUrl = 'https://docs.google.com/spreadsheets/d/1Abc_def-XYZ1234567890/edit';
     const provider = new GoogleSheetsApiProvider({

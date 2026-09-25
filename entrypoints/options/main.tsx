@@ -9,6 +9,8 @@ import {
   mapBundleToLookupList
 } from '../../lib/lists';
 import {
+  clearCache,
+  isGoogleDisconnected,
   loadCache,
   loadSettings,
   saveCache,
@@ -50,13 +52,17 @@ function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
-  const [connected, setConnected] = useState(false);
+  const [connected, setConnected] = useState<boolean | null>(null);
   const authInfo = getGoogleAuthRuntimeInfo();
 
   useEffect(() => {
     loadSettings().then((loaded) => {
       setSettings(loaded);
       setDraftUrl(loaded.legacySpreadsheetUrl ?? '');
+    });
+    isGoogleDisconnected().then((disconnected) => {
+      if (disconnected) setConnected(false);
+      else getGoogleAccessToken(false).then(() => setConnected(true)).catch(() => setConnected(false));
     });
   }, []);
 
@@ -147,9 +153,16 @@ function App() {
   async function disconnectGoogle() {
     setBusy(true);
     try {
-      await clearGoogleAuth();
+      const revoked = await clearGoogleAuth();
+      await clearCache();
       setConnected(false);
-      setMessage('Google接続を解除しました。');
+      setMessage(revoked
+        ? 'Googleの許可を取り消し、保存済みの検索データを削除しました。'
+        : 'この端末の接続と検索データを削除しました。Google側の許可を取り消せなかったため、Googleアカウントの「サードパーティとの接続」からLookupBoxを削除してください。');
+    } catch (error) {
+      await clearCache();
+      setConnected(false);
+      setMessage(error instanceof Error ? error.message : String(error));
     } finally {
       setBusy(false);
     }
@@ -320,7 +333,7 @@ function App() {
 
       <section style={{border:'1px solid #ddd', borderRadius:10, padding:16, marginBottom:22}}>
         <h2 style={{marginTop:0}}>Google接続</h2>
-        <p>現在: <strong>{connected ? '接続済み' : '未接続'}</strong></p>
+        <p>現在: <strong>{connected === null ? '確認中' : connected ? '接続済み' : '未接続'}</strong></p>
         <p>Googleの許可画面では、アクセスできるすべてのGoogleスプレッドシートの読み取り権限を求めます。LookupBoxは、入力したURLのシートを確認し、登録したリストのデータを同期・保存します。スプレッドシートを変更する権限は求めません。</p>
         {authInfo.configured ? (
           <div>

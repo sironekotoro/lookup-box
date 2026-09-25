@@ -15,6 +15,7 @@ type CachedToken = {
 };
 
 let cachedToken: CachedToken | null = null;
+import { isGoogleDisconnected, setGoogleDisconnected } from '../storage';
 
 function configuredClientId(): string {
   if (import.meta.env.CHROME) return (import.meta.env.WXT_GOOGLE_CHROME_CLIENT_ID ?? '').trim();
@@ -144,12 +145,26 @@ export async function getGoogleAccessToken(interactive = false): Promise<string>
     throw new Error('Google OAuthがこのビルドに設定されていません。');
   }
 
-  const cached = readCachedToken();
-  if (cached) return cached;
+  if (!interactive && await isGoogleDisconnected()) {
+    throw new Error('Google接続は解除されています。設定画面から「Googleに接続」を実行してください。');
+  }
 
-  if (import.meta.env.CHROME) return getChromeAccessToken(interactive);
-  if (import.meta.env.FIREFOX) return getFirefoxAccessToken(interactive);
-  throw new Error('このブラウザのGoogle OAuthにはまだ対応していません。');
+  const cached = readCachedToken();
+  if (cached) {
+    if (interactive) await setGoogleDisconnected(false);
+    return cached;
+  }
+
+  let token: string;
+  if (import.meta.env.CHROME) token = await getChromeAccessToken(interactive);
+  else if (import.meta.env.FIREFOX) token = await getFirefoxAccessToken(interactive);
+  else throw new Error('このブラウザのGoogle OAuthにはまだ対応していません。');
+  if (interactive) await setGoogleDisconnected(false);
+  else if (await isGoogleDisconnected()) {
+    await invalidateGoogleAccessToken(token);
+    throw new Error('Google接続は解除されています。');
+  }
+  return token;
 }
 
 export async function invalidateGoogleAccessToken(token: string): Promise<void> {
@@ -162,12 +177,31 @@ export async function invalidateGoogleAccessToken(token: string): Promise<void> 
   }
 }
 
-export async function clearGoogleAuth(): Promise<void> {
+export async function clearGoogleAuth(): Promise<boolean> {
+  let token: string | null = null;
+  try { token = await getGoogleAccessToken(false); } catch { /* No usable token to revoke. */ }
+  await setGoogleDisconnected(true);
   cachedToken = null;
-  if (!import.meta.env.CHROME) return;
-
-  const identity = (globalThis as any).chrome?.identity;
-  if (identity?.clearAllCachedAuthTokens) await identity.clearAllCachedAuthTokens();
+  let revoked = false;
+  try {
+    if (token) {
+      const response = await fetch('https://oauth2.googleapis.com/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ token }),
+        signal: AbortSignal.timeout(8000)
+      });
+      revoked = response.ok;
+    }
+  } catch {
+    revoked = false;
+  } finally {
+    if (import.meta.env.CHROME) {
+      const identity = (globalThis as any).chrome?.identity;
+      if (identity?.clearAllCachedAuthTokens) await identity.clearAllCachedAuthTokens();
+    }
+  }
+  return revoked;
 }
 
 export function getGoogleAuthRuntimeInfo(): GoogleAuthRuntimeInfo {
