@@ -13,13 +13,13 @@
 <body><main class="wrap">
   <p><a href="./">← LookupBox</a></p>
   <h1>LookupBox プライバシーポリシー</h1>
-  <p class="small">最終更新: 2026-09-13</p>
+  <p class="small">最終更新: 2026-09-25</p>
 
   <div class="box">LookupBox は、Google Sheets に置いた参照リストをブラウザから検索・コピーするための拡張機能です。LookupBox開発者が運用するアプリケーションサーバーへ、検索語・Sheet内容・OAuthトークンを送る仕組みはありません。</div>
 
   <h2>LookupBox がアクセスするデータ</h2>
-  <p>ユーザーが明示的にGoogleアカウントへ接続しGoogle Sheetを登録した場合、LookupBoxはGoogle OAuthとGoogle Sheets APIを使って、設定された検索リストに必要なSpreadsheetメタデータとセル値を読み取ります。</p>
-  <p>現在の開発版はGoogle Sheetsの読み取り専用スコープ <code>https://www.googleapis.com/auth/spreadsheets.readonly</code> を使用しています。Google Sheetを変更する権限は要求しません。公開版では、ストア提出前により狭いファイル単位の権限設計を検証しています。</p>
+  <p>ユーザーが明示的にGoogleアカウントへ接続した場合、LookupBoxはGoogle OAuthとGoogle Sheets APIを使います。入力されたSpreadsheet URLのメタデータと見出しを確認し、リストの登録・同期時に選択されたシートのセル値を読み取ります。</p>
+  <p>LookupBox はGoogle Sheetsの読み取り専用スコープ <code>https://www.googleapis.com/auth/spreadsheets.readonly</code> を使用します。Googleから許可される範囲は、接続したアカウントがアクセスできるすべてのGoogleスプレッドシートです。LookupBoxが確認するのは入力されたURLで、行データを保存するのは登録して同期したリストだけです。スプレッドシートを変更する権限は要求しません。</p>
 
   <h2>ブラウザ内に保存する情報</h2>
   <p>高速に検索できるよう、LookupBoxは以下をブラウザの拡張機能用ローカルストレージに保存します。</p>

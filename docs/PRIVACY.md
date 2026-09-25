@@ -1,20 +1,18 @@
 # LookupBox Privacy Policy
 
-Last updated: 2026-09-13
+Last updated: 2026-09-25
 
 LookupBox is a browser extension for searching and copying values from reference lists stored in Google Sheets.
 
 ## Data LookupBox accesses
 
-When the user explicitly connects a Google account and registers a Google Sheet, LookupBox uses Google OAuth and the Google Sheets API to read the spreadsheet metadata and cell values needed for the configured lookup list.
+When the user explicitly connects a Google account, LookupBox uses Google OAuth and the Google Sheets API to inspect metadata and headers for the Spreadsheet URL the user enters. When a list is registered or synchronized, LookupBox reads the selected Sheet's values.
 
-The current development build requests the Google Sheets read-only scope:
+LookupBox requests the Google Sheets read-only scope:
 
 `https://www.googleapis.com/auth/spreadsheets.readonly`
 
-This scope allows read access to Google Sheets that the signed-in Google account can access. LookupBox does not request permission to modify Google Sheets.
-
-The public-release authorization design is being hardened toward per-file access before store submission. The policy will be updated if the final permission model changes.
+Google grants read access to all Google Sheets that the signed-in account can access. LookupBox inspects only URLs the user enters and stores rows only for lists the user registers and synchronizes. This scope does not grant permission to modify Google Sheets.
 
 ## Local storage
 

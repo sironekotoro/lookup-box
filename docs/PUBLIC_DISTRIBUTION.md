@@ -23,19 +23,19 @@ The current implementation requests:
 
 Google classifies this as a Sensitive scope. It allows read access to all Google Sheets the signed-in user can access.
 
-The preferred least-privilege direction is to evaluate:
+Issue #11 evaluated the per-file alternative:
 
 `https://www.googleapis.com/auth/drive.file`
 
-Google classifies `drive.file` as Non-sensitive and recommends it for per-file access. The user should explicitly select the Sheet to use.
+Google classifies `drive.file` as Non-sensitive and recommends it for per-file access. However, it also authorizes editing, creating, and deleting the selected files. LookupBox is a read-only reference tool, so the public-release scope remains `spreadsheets.readonly`. This grants read access to all Google Sheets accessible to the signed-in account; LookupBox itself fetches and caches only the lists users register. Explain both the Google permission boundary and actual app behavior before connection, in the privacy policy, and in store disclosures.
 
 However, this is not a simple scope-string replacement. Google Picker's normal web integration relies on Google client scripts / `gapi`, while Manifest V3 extension pages cannot load remote executable code. The official Picker web-component package also notes that the underlying Picker API may not function directly in an MV3 extension environment.
 
 A remotely hosted Picker page that receives OAuth tokens would broaden LookupBox's data-flow/security surface and is not the preferred architecture.
 
-The least-privilege spike therefore tests whether Google's browser-mediated Picker / OnePick flow (`trigger_onepick=true`) can be combined with a public-client-safe authorization-code + PKCE flow without a LookupBox-operated token-bearing remote page.
+The investigation also considered Google's browser-mediated Picker / OnePick flow (`trigger_onepick=true`) and a public-client-safe authorization-code + PKCE flow without a LookupBox-operated token-bearing remote page. Compatibility in Chrome and Firefox was not established in an end-to-end test. These open questions do not change the scope decision: a working Picker flow would still authorize write access to selected files.
 
-Do not change the production scope until the spike proves all of the following:
+If the per-file design is reconsidered in the future, do not change the production scope until a spike proves all of the following:
 
 1. A user-selected Google Sheet can be inspected through the Sheets API.
 2. Unselected Sheets cannot be read using the same grant.
@@ -44,7 +44,9 @@ Do not change the production scope until the spike proves all of the following:
 5. Chrome and Firefox can use a public-release-safe auth flow without embedding a client secret.
 6. Access tokens and Sheet contents do not pass through a LookupBox-operated remote web page/server.
 
-If that path is not viable, the fallback is to retain direct `spreadsheets.readonly` and complete Google's Sensitive Scope Verification rather than introduce weaker token handling. Sensitive-scope verification is materially lighter than restricted-scope verification and does not by itself require the restricted-scope security assessment.
+Proceed with Google's Sensitive Scope Verification for `spreadsheets.readonly`. Sensitive-scope verification does not by itself require the restricted-scope security assessment.
+
+The official scope definitions are documented at https://developers.google.com/workspace/sheets/api/scopes. Google's Picker authorization flow is documented at https://developers.google.com/workspace/drive/picker/guides/desktop-mobile-picker.
 
 See Issue #11 for the spike acceptance criteria.
 
@@ -97,16 +99,11 @@ Do not assume the unpacked development ID and the Web Store production ID are in
 - [ ] Move homepage/privacy URLs to a verified custom domain for production OAuth branding
 - [ ] Verify all disclosure text against the final auth implementation
 
-### Phase B — least-privilege Google access
+### Phase B — read-only Google access
 
-- [ ] Prototype a no-server/no-remote-token `drive.file` selection flow
-- [ ] Test Google OnePick / browser-mediated Picker flow with PKCE
-- [ ] Prove selected-file-only access
-- [ ] Prove direct Sheets API reads still work
-- [ ] Prove multi-list add/resync workflow
-- [ ] Decide final Chrome authorization path
-- [ ] Decide final Firefox authorization path
-- [ ] If the spike fails, freeze `spreadsheets.readonly` + Sensitive Scope Verification as the public fallback
+- [x] Compare `spreadsheets.readonly` against `drive.file` and retain read-only authorization (Issue #11)
+- [x] Explain the full Google permission boundary and the narrower registered-list behavior in the extension and privacy policy
+- [ ] Review the final scope explanation and disclosures during Google OAuth verification
 
 ### Phase C — production authorization
 
@@ -132,7 +129,7 @@ Required to keep registered list definitions and a local synchronized cache so L
 
 ### `identity`
 
-Required to authorize the user with Google and obtain access needed to read the Google Sheet(s) selected or configured for LookupBox.
+Required to authorize the user with Google and obtain read-only access to their Google Sheets. Google grants access to all Sheets the signed-in account can access; LookupBox fetches only configured lists.
 
 ### `https://sheets.googleapis.com/*`
 

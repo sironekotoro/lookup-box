@@ -16,6 +16,8 @@ LookupBox lets a user register reference lists backed by Google Sheets, synchron
 
 LookupBox does not edit Google Sheets and does not modify web pages.
 
+Google grants read-only access to all Google Sheets available to the connected account. LookupBox inspects user-entered Spreadsheet URLs and stores rows only for lists explicitly registered and synchronized by the user; it does not have permission to edit them.
+
 ## Description (Japanese draft)
 
 LookupBox は、Google Sheets に置いた参照リストをブラウザからすばやく検索・コピーするための拡張機能です。
@@ -31,6 +33,8 @@ Google アカウントに接続し、利用したい Spreadsheet / Sheet と検�
 - ワンクリックコピー
 - 手動再同期
 - Sheet上の表示済み文字列を利用し、先頭ゼロ等の表示形式を保持
+
+Googleの許可範囲は、接続したアカウントがアクセスできるすべてのスプレッドシートの読み取りです。LookupBoxは入力されたURLのシートを確認し、登録したリストのデータを同期・保存します。スプレッドシートを変更する権限は求めません。
 
 LookupBox は検索語を開発者のサーバーへ送信しません。同期したリストデータはブラウザの拡張機能用ローカルストレージに保存されます。
 

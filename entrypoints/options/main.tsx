@@ -321,6 +321,7 @@ function App() {
       <section style={{border:'1px solid #ddd', borderRadius:10, padding:16, marginBottom:22}}>
         <h2 style={{marginTop:0}}>Google接続</h2>
         <p>現在: <strong>{connected ? '接続済み' : '未接続'}</strong></p>
+        <p>Googleの許可画面では、アクセスできるすべてのGoogleスプレッドシートの読み取り権限を求めます。LookupBoxは、入力したURLのシートを確認し、登録したリストのデータを同期・保存します。スプレッドシートを変更する権限は求めません。</p>
         {authInfo.configured ? (
           <div>
             <button disabled={busy} onClick={connectGoogle}>Googleに接続</button>{' '}

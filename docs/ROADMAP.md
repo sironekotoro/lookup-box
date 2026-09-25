@@ -60,13 +60,11 @@
 - [x] Public release checklist
 - [ ] Re-verify disclosures after final auth design is frozen
 
-### Least-privilege Google access
+### Read-only Google access
 
-- [ ] Prototype Google Picker + `drive.file`
-- [ ] Prove selected-file-only access
-- [ ] Prove Sheets API metadata/value reads still work with the per-file grant
-- [ ] Preserve multi-list registration/resync and formatted values
-- [ ] Decide final Chrome public authorization flow
+- [x] Evaluate Picker + `drive.file` and retain `spreadsheets.readonly` to preserve the read-only product promise (Issue #11)
+- [x] Explain that Google permits reading all accessible Sheets while LookupBox fetches only registered lists
+- [ ] Complete Google OAuth sensitive-scope verification for public distribution
 
 ### Production Firefox authorization
 
@@ -78,7 +76,7 @@
 ### Store submission
 
 - [ ] Confirm stable Chrome Web Store production extension ID / OAuth client pairing
-- [ ] Complete Google OAuth verification only if still required by the final scope design
+- [ ] Complete Google OAuth sensitive-scope verification
 - [ ] Prepare AMO source package/reviewer notes if required
 - [ ] Complete Chrome Web Store Store Listing and Privacy tabs
 - [ ] Firefox Add-ons submission

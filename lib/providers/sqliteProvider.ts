@@ -19,7 +19,7 @@ export class LocalSqliteProvider implements LookupProvider {
 
   async load(): Promise<DatasetBundle[]> {
     const SQL = await initSqlJs({
-      locateFile: (file) => {
+      locateFile: (file: string) => {
         // SQLite is not wired into the user-facing UI yet. Keep the provider
         // buildable while reserving the extension-local asset path for the
         // future WASM packaging step.

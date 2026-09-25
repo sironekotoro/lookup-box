@@ -15,9 +15,9 @@ LookupBox currently requests:
 
 `https://www.googleapis.com/auth/spreadsheets.readonly`
 
-This lets LookupBox read Google Sheets the signed-in user can access. It does not grant write access.
+Google grants read access to all Google Sheets the signed-in user can access. LookupBox inspects the Spreadsheet URL entered by the user and synchronizes registered lists. This scope does not grant write access.
 
-Google classifies this as a sensitive scope. During development, keep the OAuth consent screen in Testing mode and add the test Google accounts explicitly. Public distribution will require the appropriate Google OAuth verification or a later least-privilege design.
+Google classifies this as a sensitive scope. During development, keep the OAuth consent screen in Testing mode and add the test Google accounts explicitly. Public distribution requires Google OAuth sensitive-scope verification.
 
 ## Google Cloud project
 
