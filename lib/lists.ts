@@ -20,22 +20,36 @@ export function makeLookupListId(
   return `sheet_${sanitizeDatasetId(sheetName)}_${stableHash(base)}`;
 }
 
+export function makeConfiguredListId(
+  spreadsheetId: string,
+  sheetName: string,
+  searchColumns: string[],
+  displayColumns: string[],
+  copyColumns: string[]
+): string {
+  return `sheet_${sanitizeDatasetId(sheetName)}_${stableHash(JSON.stringify([
+    spreadsheetId, sheetName, searchColumns, displayColumns, copyColumns
+  ]))}`;
+}
+
 export function createLookupList(
   inspection: SpreadsheetInspection,
   spreadsheetUrl: string,
   sheetName: string,
-  keyColumn: string,
-  valueColumn: string
+  searchColumns: string[],
+  displayColumns: string[],
+  copyColumns: string[]
 ): LookupList {
   const spreadsheetId = inspection.spreadsheetId || extractSpreadsheetId(spreadsheetUrl);
   return {
-    id: makeLookupListId(spreadsheetId, sheetName, keyColumn, valueColumn),
+    id: makeConfiguredListId(spreadsheetId, sheetName, searchColumns, displayColumns, copyColumns),
     spreadsheetId,
     spreadsheetUrl,
     spreadsheetTitle: inspection.title || 'Google Sheet',
     sheetName,
-    keyColumn,
-    valueColumn
+    searchColumns: [...searchColumns],
+    displayColumns: [...displayColumns],
+    copyColumns: [...copyColumns]
   };
 }
 
@@ -47,13 +61,16 @@ export function getLookupListDisplayName(list: LookupList, lists: LookupList[]):
   const sameSheet = sameTitle.filter((candidate) => candidate.sheetName === list.sheetName);
   if (sameSheet.length <= 1) return `${title} / ${list.sheetName}`;
 
-  return `${title} / ${list.sheetName} (${list.keyColumn} → ${list.valueColumn})`;
-}
+  const display = list.displayColumns.join(' → ');
+  const sameDisplay = sameSheet.filter((candidate) =>
+    candidate.displayColumns.join('\u001f') === list.displayColumns.join('\u001f'));
+  if (sameDisplay.length <= 1) return `${title} / ${list.sheetName} (${display})`;
 
-function selectedColumns(list: LookupList): string[] {
-  return list.keyColumn === list.valueColumn
-    ? [list.keyColumn]
-    : [list.keyColumn, list.valueColumn];
+  const search = list.searchColumns.join('、');
+  const sameSearch = sameDisplay.filter((candidate) =>
+    candidate.searchColumns.join('\u001f') === list.searchColumns.join('\u001f'));
+  if (sameSearch.length <= 1) return `${title} / ${list.sheetName} (${display}; 検索: ${search})`;
+  return `${title} / ${list.sheetName} (${display}; 検索: ${search}; コピー: ${list.copyColumns.join('、') || 'なし'})`;
 }
 
 export function mapBundleToLookupList(
@@ -61,17 +78,16 @@ export function mapBundleToLookupList(
   list: LookupList,
   lists: LookupList[]
 ): DatasetBundle {
-  const columns = selectedColumns(list);
   return {
     definition: {
       ...bundle.definition,
       dataset_id: list.id,
       display_name: getLookupListDisplayName(list, lists),
       sheet_name: list.sheetName,
-      search_columns: columns,
-      display_columns: columns,
-      copy_columns: columns,
-      primary_key: list.keyColumn,
+      search_columns: list.searchColumns,
+      display_columns: list.displayColumns,
+      copy_columns: list.copyColumns,
+      primary_key: list.searchColumns[0] ?? '',
       enabled: true,
       provider: 'google_sheets'
     },

@@ -10,7 +10,7 @@ LookupBox is a generic browser lookup tool for reference lists. It is not a data
 - Repository name: `lookup-box`
 - Keep the UX minimal.
 - Users should not need to invent a list name; derive it from Spreadsheet metadata.
-- Minimum Google list configuration: Spreadsheet, Sheet, key column, value column.
+- Minimum Google list configuration: Spreadsheet, Sheet, at least one search column and one display column. Copy columns may be empty.
 - When a Spreadsheet title collides, display `Spreadsheet title / Sheet name`.
 
 ## Architecture

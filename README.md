@@ -9,9 +9,9 @@ Current product direction: multiple Google Sheet-backed lookup lists with direct
 ## Current features
 
 - Register multiple Google Sheet lookup lists
-- Choose Sheet, key column, and value column per list
+- Choose search, display, and copy columns per list in any number and display order
 - Derive list names automatically from Spreadsheet metadata
-- Search key/value columns incrementally
+- Search configured columns incrementally
 - Switch lists from the popup or search all lists together
 - Copy values with one click
 - Re-sync all registered lists from the popup

@@ -58,8 +58,7 @@ function stringRows(values: unknown[][] | undefined): string[][] {
 }
 
 function columnsOrDefault(columns: string[] | undefined, headers: string[]): string[] {
-  const selected = columns?.filter(Boolean) ?? [];
-  return selected.length > 0 ? selected : headers.filter(Boolean);
+  return columns === undefined ? headers.filter(Boolean) : columns.filter(Boolean);
 }
 
 function validateColumns(headers: string[], required: string[], sheetName: string): void {
@@ -69,13 +68,13 @@ function validateColumns(headers: string[], required: string[], sheetName: strin
   }
 }
 
-function rowsFromValues(headers: string[], values: string[][]): Record<string, string>[] {
+function rowsFromValues(headers: string[], values: string[][], selected: Set<string>): Record<string, string>[] {
   return values
     .filter((row) => row.some((value) => value.trim() !== ''))
     .map((row) => {
       const record: Record<string, string> = {};
       headers.forEach((header, index) => {
-        if (!header) return;
+        if (!header || !selected.has(header)) return;
         record[header] = row[index] ?? '';
       });
       return record;
@@ -159,7 +158,9 @@ export class GoogleSheetsApiProvider implements LookupProvider {
       this.simpleOptions.sheetName
     );
 
-    const rows = rowsFromValues(headers, values.slice(1));
+    const rows = rowsFromValues(
+      headers, values.slice(1), new Set([...searchColumns, ...displayColumns, ...copyColumns])
+    );
     return [{
       definition: {
         dataset_id: sanitizeDatasetId(this.simpleOptions.sheetName),

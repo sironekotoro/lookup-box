@@ -24,10 +24,11 @@ A lookup list is identified by:
 
 - Spreadsheet URL / ID
 - Sheet name
-- key column
-- value column
+- search columns
+- display columns (including their order)
+- copy columns (chosen from the display columns)
 
-The visible list name is derived automatically from the Spreadsheet title. When multiple lists from the same Spreadsheet are registered, LookupBox adds the Sheet name, and if necessary the key/value pair, to disambiguate them.
+The visible list name is derived automatically from the Spreadsheet title. When multiple lists from the same Spreadsheet are registered, LookupBox adds the Sheet name, and if necessary the display columns, to disambiguate them.
 
 The user does not invent a list name.
 
@@ -57,7 +58,7 @@ Inspection flow:
 
 1. Read Spreadsheet metadata and visible Sheet titles.
 2. Read row 1 for each visible Sheet to discover headers.
-3. Let the user choose the Sheet, key column, and value column.
+3. Let the user choose the Sheet and configure search, display, and copy columns.
 
 Sync flow:
 

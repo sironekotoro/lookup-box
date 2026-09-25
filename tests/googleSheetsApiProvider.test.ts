@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GoogleSheetsApiProvider, type GoogleAccessTokenSource } from '../lib/providers/googleSheetsApiProvider';
+import { createLookupList, mapBundleToLookupList } from '../lib/lists';
+import { searchDatasets } from '../lib/search';
 
 const tokenSource: GoogleAccessTokenSource = {
   async getAccessToken() { return 'token'; },
@@ -67,6 +69,29 @@ describe('GoogleSheetsApiProvider', () => {
       { Name: 'Example', Code: '00123' },
       { Name: 'Second', Code: '00007' }
     ]);
+  });
+
+  it('supports four columns, search-only fields, display order and an empty copy selection', async () => {
+    const spreadsheetUrl = 'https://docs.google.com/spreadsheets/d/1Abc_def-XYZ1234567890/edit';
+    const provider = new GoogleSheetsApiProvider({
+      spreadsheetUrl, sheetName: 'US',
+      searchColumns: ['Alias', 'Name'],
+      displayColumns: ['Code', 'Name', 'Region'],
+      copyColumns: []
+    }, tokenSource, async () => jsonResponse({ values: [
+      ['Name', 'Code', 'Region', 'Alias', 'Ignored'],
+      ['Example', '00123', 'East', 'Alternative', 'secret']
+    ] }));
+    const list = createLookupList({
+      spreadsheetId: '1Abc_def-XYZ1234567890', title: 'Stocks', sheets: []
+    }, spreadsheetUrl, 'US', ['Alias', 'Name'], ['Code', 'Name', 'Region'], []);
+    const loaded = await provider.load();
+    const bundle = mapBundleToLookupList(loaded[0]!, list, [list]);
+    expect(bundle.rows[0]).toEqual({ Name: 'Example', Code: '00123', Region: 'East', Alias: 'Alternative' });
+    expect(bundle.definition.display_columns).toEqual(['Code', 'Name', 'Region']);
+    expect(bundle.definition.copy_columns).toEqual([]);
+    expect(searchDatasets([bundle], 'Alternative')[0]?.row.Code).toBe('00123');
+    expect(searchDatasets([bundle], '00123')).toHaveLength(0);
   });
 
   it('invalidates a rejected token and retries once', async () => {

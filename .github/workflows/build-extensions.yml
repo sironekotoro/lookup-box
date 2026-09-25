@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       WXT_GOOGLE_CHROME_CLIENT_ID: ${{ vars.WXT_GOOGLE_CHROME_CLIENT_ID }}
@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 
@@ -124,7 +124,7 @@ jobs:
         run: find .output -maxdepth 2 -type f -print
 
       - name: Upload Chrome extension
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: lookup-box-chrome
           path: .output/*chrome*.zip
@@ -132,7 +132,7 @@ jobs:
           include-hidden-files: true
 
       - name: Upload Firefox extension
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: lookup-box-firefox
           path: .output/*firefox*.zip
