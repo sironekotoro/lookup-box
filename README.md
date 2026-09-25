@@ -15,6 +15,7 @@ Current product direction: multiple Google Sheet-backed lookup lists with direct
 - Switch lists from the popup or search all lists together
 - Copy values with one click
 - Re-sync all registered lists from the popup
+- See which lists refreshed and which failed, while keeping the previous data for failed lists
 - Show last sync time
 - Chrome and Firefox builds from one WXT codebase
 - Legacy single-list settings migration without carrying forward old gateway credentials
@@ -22,6 +23,10 @@ Current product direction: multiple Google Sheet-backed lookup lists with direct
 - Browser-specific Google auth adapter
 - OAuth-only standard distribution artifacts
 - Official magnifying-glass + list browser icon
+
+Synchronized search data is capped at approximately 8 MB. If a list exceeds
+the available browser storage, LookupBox keeps its previous cached data and
+asks you to reduce selected columns or registered lists before retrying.
 
 ## Development
 

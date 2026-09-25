@@ -67,6 +67,26 @@ Sync flow:
 3. Map the result into the existing `DatasetBundle` cache shape.
 4. Search and copy from local browser storage.
 
+Cache updates from the popup and settings page hold the same origin-wide Web Lock
+through the source read and storage write. A later sync, list edit/removal, or
+disconnect therefore cannot be overwritten by an earlier operation finishing
+late. Multi-list refresh saves each successful list separately and reports
+failures per list; an unsuccessful fetch or cache write leaves that list's
+previous saved rows available. List definitions and their cache changes are
+written together when registering, editing, or removing a list.
+
+The cache is bounded at approximately 8 MiB in UTF-8 JSON (including its
+storage key). This leaves room under Chrome's default 10 MiB local storage
+quota for settings and storage overhead. The browser can still reject writes
+earlier, including in Firefox, so a rejected write is reported and the prior
+cache is kept. No `unlimitedStorage` permission is requested. The estimate
+does not imply that an entire oversized Sheet can be searched locally; users
+can reduce selected columns or registered lists and retry.
+
+The shared lock requires Firefox 96 or newer, so the Firefox manifest enforces
+that minimum. Firefox public distribution remains gated by the separate OAuth
+and data consent work in #27 and #28.
+
 ## Provider abstraction
 
 Google Sheets API, SQLite, CSV, and future sources remain behind provider boundaries so the search UI stays source-agnostic.

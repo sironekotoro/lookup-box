@@ -1,32 +1,30 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { DatasetBundle } from '../../lib/types';
-import { activeLookupBundles, mapBundleToLookupList } from '../../lib/lists';
+import { activeLookupBundles } from '../../lib/lists';
 import { InvalidLookupSettingsError, loadCache, loadSettings, saveCache } from '../../lib/storage';
 import { cellValue, searchDatasets } from '../../lib/search';
-import { listLoadOptions, makeGoogleSourceProvider } from '../../lib/providers/googleSource';
 import { MockProvider } from '../../lib/providers/mockProvider';
+import { syncLists, syncResultMessage } from '../../lib/syncLists';
+import { withSyncLock } from '../../lib/syncLock';
 import './style.css';
 
 type CacheState = { bundles: DatasetBundle[]; syncedAt?: string };
 const DEMO_ENABLED = import.meta.env.DEV || import.meta.env.WXT_ENABLE_DEMO === 'true';
 
-async function loadSelectedSource(): Promise<DatasetBundle[]> {
+async function refreshLists(): Promise<{ cache: CacheState; message: string; failed: boolean }> {
   const settings = await loadSettings();
-
   if (settings.lists.length > 0) {
-    const bundles: DatasetBundle[] = [];
-    for (const list of settings.lists) {
-      const provider = makeGoogleSourceProvider(listLoadOptions(list));
-      const loaded = await provider.load();
-      const source = loaded[0];
-      if (!source) throw new Error(`${list.spreadsheetTitle} / ${list.sheetName} を読み込めませんでした。`);
-      bundles.push(mapBundleToLookupList(source, list, settings.lists));
-    }
-    return bundles;
+    const result = await syncLists(settings.lists);
+    const stored = await loadCache();
+    return { cache: { ...stored, bundles: activeLookupBundles(stored.bundles, settings.lists) },
+      message: syncResultMessage(result), failed: result.failed.length > 0 };
   }
 
-  if (DEMO_ENABLED && settings.useMock) return new MockProvider().load();
+  if (DEMO_ENABLED && settings.useMock) {
+    await saveCache(await new MockProvider().load());
+    return { cache: await loadCache(), message: '✓ デモデータを同期しました。', failed: false };
+  }
   throw new Error('設定画面でGoogle Sheetを登録してください。');
 }
 
@@ -57,6 +55,7 @@ function App() {
   const [copied, setCopied] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState('');
+  const [statusError, setStatusError] = useState(false);
 
   useEffect(() => {
     const onStorageChange = (changes: Record<string, { newValue?: unknown }>, area: string) => {
@@ -66,34 +65,26 @@ function App() {
     };
     browser.storage.onChanged.addListener(onStorageChange);
     let cancelled = false;
-    Promise.all([loadSettings(), loadCache()])
-      .then(async ([settings, stored]) => {
-        const active = activeLookupBundles(
-          stored.bundles,
-          settings.lists,
-          DEMO_ENABLED && settings.useMock
-        );
-        if (settings.lists.length === 0 || active.length > 0) {
-          if (!cancelled) setCache({ ...stored, bundles: active });
-          return;
-        }
-
-        if (!cancelled) {
-          setSyncing(true);
-          setStatus('登録済みのGoogle Sheetを復旧しています...');
-        }
-        const bundles = await loadSelectedSource();
-        await saveCache(bundles);
-        const next = await loadCache();
-        if (!cancelled) {
-          setCache(next);
-          const rows = bundles.reduce((n, bundle) => n + bundle.rows.length, 0);
-          setStatus(`✓ ${bundles.length}リスト / ${rows}件を同期`);
-        }
+    withSyncLock(async () => {
+      const settings = await loadSettings();
+      const stored = await loadCache();
+      const active = activeLookupBundles(stored.bundles, settings.lists, DEMO_ENABLED && settings.useMock);
+      if (settings.lists.length === 0 || active.length === settings.lists.length) {
+        return { cache: { ...stored, bundles: active }, message: '', failed: false };
+      }
+      if (!cancelled) {
+        setSyncing(true);
+        setStatus('登録済みのGoogle Sheetを復旧しています...');
+      }
+      return refreshLists();
+    })
+      .then(({ cache: stored, message, failed }) => {
+        if (!cancelled) { setCache(stored); if (message) setStatus(message); setStatusError(failed); }
       })
       .catch((error) => {
         if (cancelled) return;
         setStatus(errorStatus(error));
+        setStatusError(true);
       })
       .finally(() => {
         if (!cancelled) setSyncing(false);
@@ -121,17 +112,15 @@ function App() {
   async function resync() {
     setSyncing(true);
     setStatus('同期中...');
+    setStatusError(false);
     try {
-      const bundles = await loadSelectedSource();
-
-      await saveCache(bundles);
-      const next = await loadCache();
-      setCache(next);
-      const rows = bundles.reduce((n, bundle) => n + bundle.rows.length, 0);
-      setStatus(`✓ ${bundles.length}リスト / ${rows}件を同期`);
-      setTimeout(() => setStatus(''), 1800);
+      const result = await withSyncLock(refreshLists);
+      setCache(result.cache);
+      setStatus(result.message);
+      setStatusError(result.failed);
     } catch (error) {
       setStatus(errorStatus(error));
+      setStatusError(true);
     } finally {
       setSyncing(false);
     }
@@ -151,7 +140,7 @@ function App() {
 
       <div className="meta">{cache.bundles.length}リスト / {count}件 / 最終同期 {formatSyncedAt(cache.syncedAt)}</div>
       {cache.bundles.length > 1 && <div className="meta">検索対象: {datasetId ? cache.bundles.find((bundle) => bundle.definition.dataset_id === datasetId)?.definition.display_name : 'すべてのリスト'}</div>}
-      {status && <div className="status">{status}</div>}
+      {status && <div className="status" role="status" style={statusError ? {color:'#a00000'} : undefined}>{status}</div>}
 
       {cache.bundles.length > 1 && (
         <select value={datasetId} onChange={(e) => setDatasetId(e.target.value)}>
