@@ -121,7 +121,22 @@ export async function exchangeFirefoxGoogleCode(
     }),
     signal: AbortSignal.timeout(15000)
   });
-  if (!response.ok) throw new Error('Google認証コードの交換に失敗しました。Firefox用Desktop OAuthクライアントの設定を確認してください。');
+  if (!response.ok) {
+    // OAuth error codes are safe to show; the response may also contain sensitive details.
+    let reason = '';
+    try {
+      const body: unknown = await response.json();
+      if (body && typeof body === 'object') {
+        const { error, error_description } = body as Record<string, unknown>;
+        if (typeof error === 'string' && /^[a-z_]{1,40}$/.test(error)) reason = error;
+        if (reason === 'invalid_request' && typeof error_description === 'string' &&
+            /client_secret (?:is )?(?:missing|required)/i.test(error_description)) {
+          reason = 'invalid_request / client_secret required';
+        }
+      }
+    } catch { /* A non-JSON response is still a token exchange failure. */ }
+    throw new Error(`Google認証コードの交換に失敗しました（HTTP ${response.status}${reason ? `: ${reason}` : ''}）。`);
+  }
 
   const result: unknown = await response.json();
   if (!result || typeof result !== 'object') throw new Error('Google OAuth token response was invalid.');

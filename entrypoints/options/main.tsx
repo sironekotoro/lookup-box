@@ -56,6 +56,7 @@ function App() {
   const [copyColumns, setCopyColumns] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  const [connectError, setConnectError] = useState('');
   const [busy, setBusy] = useState(false);
   const [connected, setConnected] = useState<boolean | null>(null);
   const authInfo = getGoogleAuthRuntimeInfo();
@@ -141,6 +142,7 @@ function App() {
     }
 
     setBusy(true);
+    setConnectError('');
     setMessage('Googleに接続しています...');
     try {
       await getGoogleAccessToken(true);
@@ -150,7 +152,9 @@ function App() {
       setConnected(true);
       setMessage('✓ Googleに接続しました。');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error));
+      const reason = error instanceof Error ? error.message : String(error);
+      setConnectError(reason);
+      setMessage(reason);
     } finally {
       setBusy(false);
     }
@@ -388,6 +392,7 @@ function App() {
             このビルドにはGoogle OAuth Client IDが設定されていません。
           </p>
         )}
+        {connectError && <p role="alert" style={{color:'#a00000'}}>{connectError}</p>}
         <details style={{marginTop:12}}>
           <summary>開発情報</summary>
           <div style={{fontSize:13, color:'#666', wordBreak:'break-all'}}>

@@ -104,9 +104,18 @@ describe('Google OAuth helpers', () => {
   });
 
   it('rejects failed token exchanges and tokens with insufficient scope', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false, status: 400,
+      async json() { return { error: 'invalid_request', error_description: 'client_secret is missing' }; }
+    }));
     await expect(exchangeFirefoxGoogleCode('client', 'redirect', 'code', 'verifier'))
-      .rejects.toThrow('交換に失敗');
+      .rejects.toThrow('HTTP 400: invalid_request / client_secret required');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false, status: 400,
+      async json() { return { error: 'invalid_grant', error_description: 'Sensitive authorization code: abc' }; }
+    }));
+    await expect(exchangeFirefoxGoogleCode('client', 'redirect', 'code', 'verifier'))
+      .rejects.toThrow('HTTP 400: invalid_grant');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       async json() { return { access_token: 'token', token_type: 'Bearer', expires_in: 3600,
