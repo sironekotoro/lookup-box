@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { DatasetBundle } from '../../lib/types';
 import { activeLookupBundles, mapBundleToLookupList } from '../../lib/lists';
-import { loadCache, loadSettings, saveCache } from '../../lib/storage';
+import { InvalidLookupSettingsError, loadCache, loadSettings, saveCache } from '../../lib/storage';
 import { cellValue, searchDatasets } from '../../lib/search';
 import { listLoadOptions, makeGoogleSourceProvider } from '../../lib/providers/googleSource';
 import { MockProvider } from '../../lib/providers/mockProvider';
@@ -38,6 +38,16 @@ function formatSyncedAt(value?: string): string {
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit'
   }).format(date);
+}
+
+function errorStatus(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (error instanceof InvalidLookupSettingsError) {
+    return `${message} 設定を開いて復旧してください。`;
+  }
+  return message.includes('再認証')
+    ? `${message} 設定を開いてGoogleに接続してください。`
+    : message;
 }
 
 function App() {
@@ -83,10 +93,7 @@ function App() {
       })
       .catch((error) => {
         if (cancelled) return;
-        const message = error instanceof Error ? error.message : String(error);
-        setStatus(message.includes('再認証')
-          ? `${message} 設定を開いてGoogleに接続してください。`
-          : message);
+        setStatus(errorStatus(error));
       })
       .finally(() => {
         if (!cancelled) setSyncing(false);
@@ -124,10 +131,7 @@ function App() {
       setStatus(`✓ ${bundles.length}リスト / ${rows}件を同期`);
       setTimeout(() => setStatus(''), 1800);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setStatus(message.includes('再認証')
-        ? `${message} 設定を開いてGoogleに接続してください。`
-        : message);
+      setStatus(errorStatus(error));
     } finally {
       setSyncing(false);
     }
