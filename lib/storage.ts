@@ -6,6 +6,7 @@ const CACHE_KEY = 'lookup.cache.v2';
 const LEGACY_SETTINGS_V2_KEY = 'lookup.settings.v2';
 const LEGACY_SETTINGS_V3_KEY = 'lookup.settings.v3';
 const SETTINGS_KEY = 'lookup.settings.v4';
+const INVALID_SETTINGS_BACKUP_KEY = 'lookup.settings.v4.invalid';
 const DISCONNECTED_KEY = 'lookup.google.disconnected';
 
 export interface LookupSettings {
@@ -13,6 +14,12 @@ export interface LookupSettings {
   lists: LookupList[];
   legacySpreadsheetUrl?: string;
   legacySheetName?: string;
+}
+
+export class InvalidLookupSettingsError extends Error {
+  constructor(public readonly invalidCount: number) {
+    super(`保存済みリストのうち${invalidCount}件を読み取れません。設定は変更せずに保持しました。`);
+  }
 }
 
 export type CacheValue = {
@@ -166,7 +173,7 @@ export async function loadSettings(): Promise<LookupSettings> {
     const normalized = normalizeSettings(current);
     if (Array.isArray((current as LookupSettings).lists)
       && normalized.lists.length !== (current as LookupSettings).lists.length) {
-      throw new Error('保存済みリストの一部が読み取れません。元の設定を保持しました。設定を修復してから再度開いてください。');
+      throw new InvalidLookupSettingsError((current as LookupSettings).lists.length - normalized.lists.length);
     }
     if (JSON.stringify(current) !== JSON.stringify(normalized)) await saveSettings(normalized);
     return normalized;
@@ -189,6 +196,25 @@ export async function loadSettings(): Promise<LookupSettings> {
   }
 
   return migrated;
+}
+
+export async function recoverInvalidSettings(): Promise<LookupSettings> {
+  const stored = await browser.storage.local.get([SETTINGS_KEY, INVALID_SETTINGS_BACKUP_KEY]);
+  const raw = stored[SETTINGS_KEY];
+  if (!raw || !Array.isArray((raw as LookupSettings).lists)) throw new Error('復旧する設定が見つかりません。');
+  const normalized = normalizeSettings(raw);
+  if (normalized.lists.length === (raw as LookupSettings).lists.length) return loadSettings();
+  // Keep the first damaged version so repeated recovery cannot overwrite the backup.
+  if (stored[INVALID_SETTINGS_BACKUP_KEY] === undefined) {
+    await browser.storage.local.set({ [INVALID_SETTINGS_BACKUP_KEY]: raw });
+  }
+  await saveSettings(normalized);
+  return normalized;
+}
+
+export async function loadInvalidSettingsBackup(): Promise<unknown> {
+  const stored = await browser.storage.local.get([SETTINGS_KEY, INVALID_SETTINGS_BACKUP_KEY]);
+  return stored[SETTINGS_KEY] ?? stored[INVALID_SETTINGS_BACKUP_KEY];
 }
 
 export async function saveSettings(settings: LookupSettings): Promise<void> {

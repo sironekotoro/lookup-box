@@ -52,6 +52,10 @@ Used only for Google authorization so LookupBox can access the Google Sheet(s) r
 
 Used only to call Google Sheets API endpoints for Spreadsheet metadata and formatted cell values. LookupBox does not request Google Sheets write access.
 
+### oauth2.googleapis.com/revoke host access
+
+Used when the user selects Disconnect to ask Google to revoke the current OAuth grant. Cached lookup rows are also deleted from extension storage. No lookup data is sent to this endpoint.
+
 ## Data handling disclosure draft
 
 - Popup search terms: processed locally; not sent to the developer.

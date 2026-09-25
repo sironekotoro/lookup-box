@@ -1,3 +1,5 @@
+import { isGoogleDisconnected, setGoogleDisconnected } from '../storage';
+
 export const SHEETS_READONLY_SCOPE = 'https://www.googleapis.com/auth/spreadsheets.readonly';
 
 export type GoogleAuthBrowser = 'chrome' | 'firefox' | 'other';
@@ -15,7 +17,6 @@ type CachedToken = {
 };
 
 let cachedToken: CachedToken | null = null;
-import { isGoogleDisconnected, setGoogleDisconnected } from '../storage';
 
 function configuredClientId(): string {
   if (import.meta.env.CHROME) return (import.meta.env.WXT_GOOGLE_CHROME_CLIENT_ID ?? '').trim();

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { clearCache, isGoogleDisconnected, loadCache, loadSettings, normalizeSettings, setGoogleDisconnected } from '../lib/storage';
+import { clearCache, InvalidLookupSettingsError, isGoogleDisconnected, loadCache, loadSettings, normalizeSettings, recoverInvalidSettings, setGoogleDisconnected } from '../lib/storage';
 import type { DatasetBundle } from '../lib/types';
 
 const legacyBundle: DatasetBundle = {
@@ -143,8 +143,32 @@ describe('settings migration', () => {
     vi.stubGlobal('browser', { storage: { local: {
       async get() { return { 'lookup.settings.v4': original }; }, set, async remove() {}
     } } });
-    await expect(loadSettings()).rejects.toThrow('元の設定を保持');
+    await expect(loadSettings()).rejects.toBeInstanceOf(InvalidLookupSettingsError);
     expect(set).not.toHaveBeenCalled();
+  });
+
+  it('backs up unreadable lists before explicitly recovering valid lists', async () => {
+    const valid = {
+      id: 'good', spreadsheetId: 'id', spreadsheetUrl: 'url',
+      spreadsheetTitle: 'Stocks', sheetName: 'US',
+      searchColumns: ['Name'], displayColumns: ['Name'], copyColumns: []
+    };
+    const original = { lists: [valid, { id: 'broken', spreadsheetId: 'id' }] };
+    const values: Record<string, unknown> = { 'lookup.settings.v4': original };
+    vi.stubGlobal('browser', { storage: { local: {
+      async get(keys: string | string[]) {
+        return Object.fromEntries((Array.isArray(keys) ? keys : [keys]).map((key) => [key, values[key]]));
+      },
+      async set(update: Record<string, unknown>) { Object.assign(values, update); },
+      async remove() {}
+    } } });
+    await expect(loadSettings()).rejects.toBeInstanceOf(InvalidLookupSettingsError);
+    expect(values['lookup.settings.v4']).toBe(original);
+    const recovered = await recoverInvalidSettings();
+    expect(recovered.lists).toHaveLength(1);
+    expect(recovered.lists[0]?.id).toBe('good');
+    expect(values['lookup.settings.v4.invalid']).toEqual(original);
+    expect((await loadSettings()).lists).toHaveLength(1);
   });
 
   it('keeps a disconnect marker while deleting cached rows', async () => {

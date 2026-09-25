@@ -137,6 +137,10 @@ Required to authorize the user with Google and obtain read-only access to their 
 
 Required so the extension can read spreadsheet metadata and formatted cell values directly from the Google Sheets API. LookupBox does not request write access to Sheets.
 
+### `https://oauth2.googleapis.com/revoke`
+
+Required only when the user chooses **Disconnect**. LookupBox sends the current OAuth access token directly to Google's revocation endpoint and clears its local synchronized rows. If Google does not confirm revocation, the extension stops silent access locally and directs the user to revoke access in their Google Account.
+
 ## Security / review invariants
 
 - no OAuth client secret in the extension
