@@ -1,0 +1,7 @@
+languages = ["es"]
+exclude = ["**/*.test.ts", "**/*.spec.ts", "**/*.d.ts", "**/generated/**"]
+jobs = 1
+cache = false
+
+[ext]
+es = ["ts", "tsx"]

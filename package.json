@@ -13,6 +13,7 @@
     "zip:chrome": "wxt zip -b chrome",
     "zip:firefox": "wxt zip -b firefox",
     "typecheck": "tsc --noEmit",
+    "complexity": "node scripts/complexity.mjs",
     "test": "vitest run",
     "check": "npm run typecheck && npm test",
     "postinstall": "wxt prepare"
