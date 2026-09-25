@@ -38,7 +38,8 @@ export default defineConfig({
       ...(browser === 'firefox' ? {
         browser_specific_settings: {
           gecko: {
-            id: 'lookupbox@sironekotoro.com'
+            id: 'lookupbox@sironekotoro.com',
+            strict_min_version: '96.0'
           }
         }
       } : {})

@@ -18,6 +18,7 @@ import {
   loadSettings,
   recoverInvalidSettings,
   saveCache,
+  saveListSettingsAndCache,
   saveSettings,
   type LookupSettings
 } from '../../lib/storage';
@@ -32,6 +33,7 @@ import {
   makeGoogleSourceProvider
 } from '../../lib/providers/googleSource';
 import { MockProvider } from '../../lib/providers/mockProvider';
+import { withSyncLock } from '../../lib/syncLock';
 
 const DEMO_ENABLED = import.meta.env.DEV || import.meta.env.WXT_ENABLE_DEMO === 'true';
 
@@ -62,7 +64,7 @@ function App() {
   const authInfo = getGoogleAuthRuntimeInfo();
 
   useEffect(() => {
-    loadSettings().then((loaded) => {
+    withSyncLock(loadSettings).then((loaded) => {
       setSettings(loaded);
       setDraftUrl(loaded.legacySpreadsheetUrl ?? '');
       setSettingsReady(true);
@@ -150,8 +152,12 @@ function App() {
     setMessage('Googleに接続しています...');
     try {
       await getGoogleAccessToken(true);
-      const next: LookupSettings = { ...settings, useMock: false };
-      await saveSettings(next);
+      const next = await withSyncLock(async () => {
+        const latest = await loadSettings();
+        const updated: LookupSettings = { ...latest, useMock: false };
+        await saveSettings(updated);
+        return updated;
+      });
       setSettings(next);
       setConnected(true);
       setMessage('✓ Googleに接続しました。');
@@ -165,14 +171,17 @@ function App() {
   async function disconnectGoogle() {
     setBusy(true);
     try {
-      const revoked = await clearGoogleAuth();
-      await clearCache();
+      const revoked = await withSyncLock(async () => {
+        const result = await clearGoogleAuth();
+        await clearCache();
+        return result;
+      });
       setConnected(false);
       setMessage(revoked
         ? 'Googleの許可を取り消し、保存済みの検索データを削除しました。'
         : 'この端末の接続と検索データを削除しました。Google側の許可を取り消せなかったため、Googleアカウントの「サードパーティとの接続」からLookupBoxを削除してください。');
     } catch (error) {
-      await clearCache();
+      await withSyncLock(clearCache);
       setConnected(false);
       setMessage(error instanceof Error ? error.message : String(error));
     } finally {
@@ -188,12 +197,17 @@ function App() {
     }
     setBusy(true);
     try {
-      const bundles = await new MockProvider().load();
-      await saveCache(bundles);
-      const next = { ...settings, useMock: true };
-      await saveSettings(next);
+      const next = await withSyncLock(async () => {
+        const latest = await loadSettings();
+        if (latest.lists.length > 0) throw new Error('登録済みのリストがあります。');
+        const next = { ...latest, useMock: true };
+        await saveListSettingsAndCache(next, await new MockProvider().load());
+        return next;
+      });
       setSettings(next);
       setMessage('デモデータを読み込みました。Popupで Apple / Microsoft / AAPL / MSFT を検索できます。');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
     } finally {
       setBusy(false);
     }
@@ -246,36 +260,46 @@ function App() {
 
     setBusy(true);
     try {
-      const candidate = createLookupList(
-        inspection, draftUrl, selectedSheet.name, searchColumns, displayColumns, copyColumns
-      );
-      const matching = settings.lists.find((current) => current.spreadsheetId === candidate.spreadsheetId
-        && current.sheetName === candidate.sheetName
-        && JSON.stringify([current.searchColumns, current.displayColumns, current.copyColumns])
-          === JSON.stringify([searchColumns, displayColumns, copyColumns]));
-      if (matching && matching.id !== editingId) {
-        if (editingId) throw new Error('同じ列設定のリストが既に登録されています。');
-        throw new Error('この列設定のリストは既に登録されています。編集から変更してください。');
-      }
-      const list = { ...candidate, id: editingId ?? candidate.id };
-      const nextLists = [...settings.lists.filter((candidate) => candidate.id !== list.id), list];
-      const bundle = await loadListBundle(list, nextLists);
-      const cache = await loadCache();
-      const retained = activeLookupBundles(cache.bundles, settings.lists)
-        .filter((candidate) => candidate.definition.dataset_id !== list.id);
-      await saveCache(applyLookupListDisplayNames([...retained, bundle], nextLists));
+      const { next, list } = await withSyncLock(async () => {
+        const latest = await loadSettings();
+        const candidate = createLookupList(
+          inspection, draftUrl, selectedSheet.name, searchColumns, displayColumns, copyColumns
+        );
+        const matching = latest.lists.find((current) => current.spreadsheetId === candidate.spreadsheetId
+          && current.sheetName === candidate.sheetName
+          && JSON.stringify([current.searchColumns, current.displayColumns, current.copyColumns])
+            === JSON.stringify([searchColumns, displayColumns, copyColumns]));
+        if (matching && matching.id !== editingId) {
+          if (editingId) throw new Error('同じ列設定のリストが既に登録されています。');
+          throw new Error('この列設定のリストは既に登録されています。編集から変更してください。');
+        }
+        const list = { ...candidate, id: editingId ?? candidate.id };
+        if (editingId && !latest.lists.some((current) => current.id === editingId)) {
+          throw new Error('編集中のリストが変更されました。設定を開き直してください。');
+        }
+        if (editingId && JSON.stringify(latest.lists.find((current) => current.id === editingId))
+            !== JSON.stringify(settings.lists.find((current) => current.id === editingId))) {
+          throw new Error('編集中のリストが変更されました。設定画面を開き直してください。');
+        }
+        const nextLists = [...latest.lists.filter((current) => current.id !== list.id), list];
+        const bundle = await loadListBundle(list, nextLists);
+        const cache = await loadCache();
+        const retained = activeLookupBundles(cache.bundles, latest.lists)
+          .filter((current) => current.definition.dataset_id !== list.id);
 
-      const next: LookupSettings = {
-        ...settings,
-        lists: nextLists,
-        useMock: false,
-        legacySpreadsheetUrl: undefined,
-        legacySheetName: undefined
-      };
-      await saveSettings(next);
+        const next: LookupSettings = {
+          ...latest,
+          lists: nextLists,
+          useMock: false,
+          legacySpreadsheetUrl: undefined,
+          legacySheetName: undefined
+        };
+        await saveListSettingsAndCache(next, applyLookupListDisplayNames([...retained, bundle], nextLists));
+        return { next, list };
+      });
       setSettings(next);
       setConnected(true);
-      setMessage(`✓ ${getLookupListDisplayName(list, nextLists)} を${editingId ? '更新' : '登録'}・同期しました。`);
+      setMessage(`✓ ${getLookupListDisplayName(list, next.lists)} を${editingId ? '更新' : '登録'}・同期しました。`);
       setInspection(null);
       setSheetName('');
       setSearchColumns([]);
@@ -293,14 +317,18 @@ function App() {
   async function syncList(list: LookupList) {
     setBusy(true);
     try {
-      const bundle = await loadListBundle(list, settings.lists);
-      const cache = await loadCache();
-      const retained = activeLookupBundles(cache.bundles, settings.lists)
-        .filter((candidate) => candidate.definition.dataset_id !== list.id);
-      await saveCache(applyLookupListDisplayNames([...retained, bundle], settings.lists));
-      const next = { ...settings, useMock: false };
-      await saveSettings(next);
-      setSettings(next);
+      await withSyncLock(async () => {
+        const latest = await loadSettings();
+        const current = latest.lists.find((item) => item.id === list.id);
+        if (!current || JSON.stringify(current) !== JSON.stringify(list)) {
+          throw new Error('リストの設定が変更されました。設定画面を開き直してください。');
+        }
+        const bundle = await loadListBundle(current, latest.lists);
+        const cache = await loadCache();
+        const retained = activeLookupBundles(cache.bundles, latest.lists)
+          .filter((candidate) => candidate.definition.dataset_id !== current.id);
+        await saveCache(applyLookupListDisplayNames([...retained, bundle], latest.lists));
+      });
       setConnected(true);
       setMessage(`✓ ${getLookupListDisplayName(list, settings.lists)} を再同期しました。`);
     } catch (error) {
@@ -313,14 +341,16 @@ function App() {
   async function removeList(listId: string) {
     setBusy(true);
     try {
-      const nextLists = settings.lists.filter((list) => list.id !== listId);
-      const next = { ...settings, lists: nextLists, useMock: false };
-      const cache = await loadCache();
-      await saveCache(applyLookupListDisplayNames(
-        activeLookupBundles(cache.bundles, nextLists),
-        nextLists
-      ));
-      await saveSettings(next);
+      const next = await withSyncLock(async () => {
+        const latest = await loadSettings();
+        const nextLists = latest.lists.filter((list) => list.id !== listId);
+        const next = { ...latest, lists: nextLists, useMock: false };
+        const cache = await loadCache();
+        await saveListSettingsAndCache(next, applyLookupListDisplayNames(
+          activeLookupBundles(cache.bundles, nextLists), nextLists
+        ));
+        return next;
+      });
       setSettings(next);
       setMessage('リストを削除しました。');
       if (editingId === listId) {
@@ -361,7 +391,7 @@ function App() {
           <button disabled={busy} onClick={async () => {
             setBusy(true);
             try {
-              const recovered = await recoverInvalidSettings();
+              const recovered = await withSyncLock(recoverInvalidSettings);
               setSettings(recovered);
               setSettingsError(null);
               setSettingsReady(true);

@@ -8,6 +8,12 @@ const LEGACY_SETTINGS_V3_KEY = 'lookup.settings.v3';
 const SETTINGS_KEY = 'lookup.settings.v4';
 const INVALID_SETTINGS_BACKUP_KEY = 'lookup.settings.v4.invalid';
 const DISCONNECTED_KEY = 'lookup.google.disconnected';
+// Keep room for settings and browser bookkeeping below Chrome's 10 MiB local quota.
+export const MAX_CACHE_BYTES = 8 * 1024 * 1024;
+
+export class CacheWriteError extends Error {
+  constructor(message: string) { super(message); }
+}
 
 export interface LookupSettings {
   useMock?: boolean;
@@ -120,9 +126,7 @@ export function normalizeSettings(raw: unknown, cache?: Partial<CacheValue>): Lo
 }
 
 export async function saveCache(bundles: DatasetBundle[]): Promise<void> {
-  await browser.storage.local.set({
-    [CACHE_KEY]: { bundles, syncedAt: new Date().toISOString() }
-  });
+  await saveCacheValue({ bundles, syncedAt: new Date().toISOString() });
 }
 
 export async function clearCache(): Promise<void> {
@@ -139,7 +143,27 @@ export async function setGoogleDisconnected(disconnected: boolean): Promise<void
 }
 
 async function saveCacheValue(value: CacheValue): Promise<void> {
-  await browser.storage.local.set({ [CACHE_KEY]: value });
+  await writeCache({ [CACHE_KEY]: value });
+}
+
+async function writeCache(update: Record<string, unknown>): Promise<void> {
+  const cache = update[CACHE_KEY];
+  const bytes = new TextEncoder().encode(CACHE_KEY + JSON.stringify(cache)).length;
+  if (bytes > MAX_CACHE_BYTES) {
+    throw new CacheWriteError('同期データが保存上限（約8 MB）を超えました。使用する列やリストを減らし、再同期してください。以前の検索データは保持しています。');
+  }
+  try {
+    await browser.storage.local.set(update);
+  } catch {
+    throw new CacheWriteError('同期データを保存できませんでした。ブラウザの空き容量やリストの大きさを確認してください。以前の検索データは保持しています。');
+  }
+}
+
+export async function saveListSettingsAndCache(settings: LookupSettings, bundles: DatasetBundle[]): Promise<void> {
+  await writeCache({
+    [SETTINGS_KEY]: settings,
+    [CACHE_KEY]: { bundles, syncedAt: new Date().toISOString() }
+  });
 }
 
 export async function loadCache(): Promise<CacheValue> {
@@ -149,18 +173,6 @@ export async function loadCache(): Promise<CacheValue> {
     bundles: cached?.bundles ?? [],
     syncedAt: cached?.syncedAt
   };
-}
-
-export async function upsertCacheBundle(bundle: DatasetBundle): Promise<void> {
-  const cache = await loadCache();
-  const bundles = cache.bundles.filter((candidate) => candidate.definition.dataset_id !== bundle.definition.dataset_id);
-  bundles.push(bundle);
-  await saveCache(bundles);
-}
-
-export async function removeCacheBundle(datasetId: string): Promise<void> {
-  const cache = await loadCache();
-  await saveCache(cache.bundles.filter((bundle) => bundle.definition.dataset_id !== datasetId));
 }
 
 export async function loadSettings(): Promise<LookupSettings> {
@@ -186,18 +198,20 @@ export async function loadSettings(): Promise<LookupSettings> {
   const cached = result[CACHE_KEY] as Partial<CacheValue> | undefined;
   const legacy = result[LEGACY_SETTINGS_V3_KEY] ?? result[LEGACY_SETTINGS_V2_KEY];
   const migrated = normalizeSettings(legacy, cached);
-  await saveSettings(migrated);
-  await browser.storage.local.remove([LEGACY_SETTINGS_V3_KEY, LEGACY_SETTINGS_V2_KEY]);
-
+  let mappedCache: CacheValue | undefined;
   if (migrated.lists.length === 1 && cached?.bundles?.length) {
     const list = migrated.lists[0]!;
     const sourceBundle = cached.bundles.find((bundle) => bundle.definition.sheet_name === list.sheetName)
       ?? cached.bundles[0];
     if (sourceBundle) {
       const mapped = mapBundleToLookupList(sourceBundle, list, migrated.lists);
-      await saveCacheValue({ bundles: [mapped], syncedAt: cached.syncedAt });
+      mappedCache = { bundles: [mapped], syncedAt: cached.syncedAt };
     }
   }
+
+  if (mappedCache) await writeCache({ [SETTINGS_KEY]: migrated, [CACHE_KEY]: mappedCache });
+  else await saveSettings(migrated);
+  await browser.storage.local.remove([LEGACY_SETTINGS_V3_KEY, LEGACY_SETTINGS_V2_KEY]);
 
   return migrated;
 }

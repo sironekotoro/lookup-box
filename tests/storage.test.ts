@@ -137,6 +137,22 @@ describe('settings migration', () => {
     expect(cache.bundles[0]?.rows).toEqual([{ Name: 'Apple', Code: 'AAPL' }]);
   });
 
+  it('keeps legacy settings and cache if migration cannot save the mapped cache', async () => {
+    const legacy = { spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/1Abc_def-XYZ1234567890/edit', sheetName: 'companies' };
+    const previous = { bundles: [legacyBundle] };
+    const set = vi.fn().mockRejectedValue(new Error('QUOTA_BYTES quota exceeded'));
+    const remove = vi.fn();
+    vi.stubGlobal('browser', { storage: { local: {
+      async get() { return { 'lookup.settings.v3': legacy, 'lookup.cache.v2': previous }; }, set, remove
+    } } });
+
+    await expect(loadSettings()).rejects.toThrow('以前の検索データは保持');
+    expect(set).toHaveBeenCalledOnce();
+    expect(set.mock.calls[0]?.[0]).toHaveProperty('lookup.settings.v4');
+    expect(set.mock.calls[0]?.[0]).toHaveProperty('lookup.cache.v2');
+    expect(remove).not.toHaveBeenCalled();
+  });
+
   it('does not overwrite settings with an invalid list', async () => {
     const original = { lists: [{ id: 'broken', spreadsheetId: 'sheet' }] };
     const set = vi.fn();
