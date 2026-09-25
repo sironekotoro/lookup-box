@@ -29,6 +29,8 @@ Issue #11 evaluated the per-file alternative:
 
 Google classifies `drive.file` as Non-sensitive and recommends it for per-file access. However, it also authorizes editing, creating, and deleting the selected files. LookupBox is a read-only reference tool, so the public-release scope remains `spreadsheets.readonly`. This grants read access to all Google Sheets accessible to the signed-in account; LookupBox itself fetches and caches only the lists users register. Explain both the Google permission boundary and actual app behavior before connection, in the privacy policy, and in store disclosures.
 
+This choice prioritizes an OAuth grant incapable of changing a spreadsheet. A stolen access token could still read every Sheet available to that account, including organizational Sheets, until revoked or expired. Workspace administrators may restrict unverified third-party apps or access to these scopes; public verification does not guarantee every Workspace account can connect.
+
 However, this is not a simple scope-string replacement. Google Picker's normal web integration relies on Google client scripts / `gapi`, while Manifest V3 extension pages cannot load remote executable code. The official Picker web-component package also notes that the underlying Picker API may not function directly in an MV3 extension environment.
 
 A remotely hosted Picker page that receives OAuth tokens would broaden LookupBox's data-flow/security surface and is not the preferred architecture.
@@ -134,6 +136,10 @@ Required to authorize the user with Google and obtain read-only access to their 
 ### `https://sheets.googleapis.com/*`
 
 Required so the extension can read spreadsheet metadata and formatted cell values directly from the Google Sheets API. LookupBox does not request write access to Sheets.
+
+### `https://oauth2.googleapis.com/revoke`
+
+Required only when the user chooses **Disconnect**. LookupBox sends the current OAuth access token directly to Google's revocation endpoint and clears its local synchronized rows. If Google does not confirm revocation, the extension stops silent access locally and directs the user to revoke access in their Google Account.
 
 ## Security / review invariants
 

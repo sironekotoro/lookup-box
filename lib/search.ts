@@ -8,6 +8,11 @@ export interface SearchHit {
   score: number;
 }
 
+export function cellValue(row: LookupRow, column: string): string {
+  const value = Object.hasOwn(row, column) ? row[column] : undefined;
+  return typeof value === 'string' ? value : '';
+}
+
 export function searchDatasets(
   bundles: DatasetBundle[],
   query: string,
@@ -21,7 +26,7 @@ export function searchDatasets(
     if (selectedDatasetId && bundle.definition.dataset_id !== selectedDatasetId) continue;
 
     for (const row of bundle.rows) {
-      const fields = bundle.definition.search_columns.map((c) => normalizeText(row[c]));
+      const fields = bundle.definition.search_columns.map((c) => normalizeText(cellValue(row, c)));
       const joined = fields.join(' ');
       if (!tokens.every((t) => joined.includes(t))) continue;
 

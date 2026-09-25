@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import type { DatasetBundle } from '../../lib/types';
 import { activeLookupBundles, mapBundleToLookupList } from '../../lib/lists';
 import { loadCache, loadSettings, saveCache } from '../../lib/storage';
-import { searchDatasets } from '../../lib/search';
+import { cellValue, searchDatasets } from '../../lib/search';
 import { listLoadOptions, makeGoogleSourceProvider } from '../../lib/providers/googleSource';
 import { MockProvider } from '../../lib/providers/mockProvider';
 import './style.css';
@@ -49,6 +49,12 @@ function App() {
   const [status, setStatus] = useState('');
 
   useEffect(() => {
+    const onStorageChange = (changes: Record<string, { newValue?: unknown }>, area: string) => {
+      if (area === 'local' && changes['lookup.cache.v2'] && !changes['lookup.cache.v2'].newValue) {
+        setCache({ bundles: [] });
+      }
+    };
+    browser.storage.onChanged.addListener(onStorageChange);
     let cancelled = false;
     Promise.all([loadSettings(), loadCache()])
       .then(async ([settings, stored]) => {
@@ -85,7 +91,7 @@ function App() {
       .finally(() => {
         if (!cancelled) setSyncing(false);
       });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; browser.storage.onChanged.removeListener(onStorageChange); };
   }, []);
 
   useEffect(() => {
@@ -167,9 +173,9 @@ function App() {
               {bundle.definition.display_columns.map((column) => (
                 <div className="field" key={column}>
                   <span className="label">{column}</span>
-                  <span className="value">{hit.row[column] ?? ''}</span>
+                  <span className="value">{cellValue(hit.row, column)}</span>
                   {bundle.definition.copy_columns.includes(column) && (
-                    <button onClick={() => copy(hit.row[column] ?? '', `${index}-${column}`)}>
+                    <button onClick={() => copy(cellValue(hit.row, column), `${index}-${column}`)}>
                       {copied === `${index}-${column}` ? '✓' : 'コピー'}
                     </button>
                   )}

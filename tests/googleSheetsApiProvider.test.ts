@@ -71,6 +71,52 @@ describe('GoogleSheetsApiProvider', () => {
     ]);
   });
 
+  it('keeps __proto__ as an ordinary cell value', async () => {
+    const provider = new GoogleSheetsApiProvider({
+      spreadsheetUrl: '1Abc_def-XYZ1234567890', sheetName: 'US',
+      searchColumns: ['__proto__'], displayColumns: ['__proto__'], copyColumns: []
+    }, tokenSource, async () => jsonResponse({ values: [['__proto__'], ['safe value']] }));
+    const row = (await provider.load())[0]!.rows[0]!;
+    expect(Object.getOwnPropertyDescriptor(row, '__proto__')?.value).toBe('safe value');
+    expect(searchDatasets((await provider.load()), 'safe')[0]?.row['__proto__']).toBe('safe value');
+  });
+
+  it('skips a tab with duplicate headers while keeping other tabs available', async () => {
+    const provider = new GoogleSheetsApiProvider(undefined, tokenSource, async (input) => String(input).includes('values:batchGet')
+      ? jsonResponse({ valueRanges: [
+          { values: [['Name', 'Name']] }, { values: [['Name', 'Code']] }
+        ] })
+      : jsonResponse({ sheets: [
+          { properties: { title: 'Notes' } }, { properties: { title: 'US' } }
+        ] }));
+    expect((await provider.inspect('1Abc_def-XYZ1234567890')).sheets).toEqual([
+      { name: 'US', headers: ['Name', 'Code'] }
+    ]);
+  });
+
+  it('explains when every visible tab has duplicate headers', async () => {
+    const provider = new GoogleSheetsApiProvider(undefined, tokenSource, async (input) => String(input).includes('values:batchGet')
+      ? jsonResponse({ valueRanges: [{ values: [['Name', 'Name']] }] })
+      : jsonResponse({ sheets: [{ properties: { title: 'Notes' } }] }));
+    await expect(provider.inspect('1Abc_def-XYZ1234567890')).rejects.toThrow('見出しが重複');
+  });
+
+  it('rejects duplicates in selected columns but ignores unused duplicate headers', async () => {
+    const provider = new GoogleSheetsApiProvider({
+      spreadsheetUrl: '1Abc_def-XYZ1234567890', sheetName: 'US',
+      searchColumns: ['Name'], displayColumns: ['Name']
+    }, tokenSource, async () => jsonResponse({ values: [['Name', 'Name'], ['A', 'B']] }));
+    await expect(provider.load()).rejects.toThrow('重複');
+
+    const unrelated = new GoogleSheetsApiProvider({
+      spreadsheetUrl: '1Abc_def-XYZ1234567890', sheetName: 'US',
+      searchColumns: ['Name'], displayColumns: ['Name'], copyColumns: []
+    }, tokenSource, async () => jsonResponse({ values: [
+      ['Name', 'Notes', 'Notes'], ['A', 'first', 'second']
+    ] }));
+    expect((await unrelated.load())[0]?.rows[0]?.Name).toBe('A');
+  });
+
   it('supports four columns, search-only fields, display order and an empty copy selection', async () => {
     const spreadsheetUrl = 'https://docs.google.com/spreadsheets/d/1Abc_def-XYZ1234567890/edit';
     const provider = new GoogleSheetsApiProvider({

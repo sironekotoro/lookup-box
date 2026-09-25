@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadCache, loadSettings, normalizeSettings } from '../lib/storage';
+import { clearCache, InvalidLookupSettingsError, isGoogleDisconnected, loadCache, loadSettings, normalizeSettings, recoverInvalidSettings, setGoogleDisconnected } from '../lib/storage';
 import type { DatasetBundle } from '../lib/types';
 
 const legacyBundle: DatasetBundle = {
@@ -135,5 +135,91 @@ describe('settings migration', () => {
     expect(values['lookup.settings.v4']).toEqual(settings);
     expect(cache.bundles[0]?.definition.dataset_id).toBe('original-list');
     expect(cache.bundles[0]?.rows).toEqual([{ Name: 'Apple', Code: 'AAPL' }]);
+  });
+
+  it('does not overwrite settings with an invalid list', async () => {
+    const original = { lists: [{ id: 'broken', spreadsheetId: 'sheet' }] };
+    const set = vi.fn();
+    vi.stubGlobal('browser', { storage: { local: {
+      async get() { return { 'lookup.settings.v4': original }; }, set, async remove() {}
+    } } });
+    await expect(loadSettings()).rejects.toBeInstanceOf(InvalidLookupSettingsError);
+    expect(set).not.toHaveBeenCalled();
+  });
+
+  it.each([{ lists: 'broken' }, {}])('does not migrate malformed v4 settings: %j', async (original) => {
+    const set = vi.fn();
+    const remove = vi.fn();
+    vi.stubGlobal('browser', { storage: { local: {
+      async get() { return { 'lookup.settings.v4': original }; }, set, remove
+    } } });
+    await expect(loadSettings()).rejects.toBeInstanceOf(InvalidLookupSettingsError);
+    expect(set).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it('only migrates legacy settings when the v4 key is absent', async () => {
+    const saved: Record<string, unknown> = { 'lookup.settings.v3': { useMock: true } };
+    const set = vi.fn(async (update: Record<string, unknown>) => Object.assign(saved, update));
+    vi.stubGlobal('browser', { storage: { local: {
+      async get(keys: string[]) {
+        return Object.fromEntries(keys.filter((key) => Object.hasOwn(saved, key)).map((key) => [key, saved[key]]));
+      }, set, async remove() {}
+    } } });
+    expect((await loadSettings()).lists).toEqual([]);
+    expect(set).toHaveBeenCalledOnce();
+  });
+
+  it('backs up malformed v4 settings before explicitly resetting their list structure', async () => {
+    const original = { lists: 'broken' };
+    const saved: Record<string, unknown> = { 'lookup.settings.v4': original };
+    vi.stubGlobal('browser', { storage: { local: {
+      async get(keys: string[]) {
+        return Object.fromEntries(keys.filter((key) => Object.hasOwn(saved, key)).map((key) => [key, saved[key]]));
+      },
+      async set(update: Record<string, unknown>) { Object.assign(saved, update); },
+      async remove() {}
+    } } });
+    await expect(loadSettings()).rejects.toBeInstanceOf(InvalidLookupSettingsError);
+    expect((await recoverInvalidSettings()).lists).toEqual([]);
+    expect(saved['lookup.settings.v4.invalid']).toEqual(original);
+    expect((await loadSettings()).lists).toEqual([]);
+  });
+
+  it('backs up unreadable lists before explicitly recovering valid lists', async () => {
+    const valid = {
+      id: 'good', spreadsheetId: 'id', spreadsheetUrl: 'url',
+      spreadsheetTitle: 'Stocks', sheetName: 'US',
+      searchColumns: ['Name'], displayColumns: ['Name'], copyColumns: []
+    };
+    const original = { lists: [valid, { id: 'broken', spreadsheetId: 'id' }] };
+    const values: Record<string, unknown> = { 'lookup.settings.v4': original };
+    vi.stubGlobal('browser', { storage: { local: {
+      async get(keys: string | string[]) {
+        return Object.fromEntries((Array.isArray(keys) ? keys : [keys]).map((key) => [key, values[key]]));
+      },
+      async set(update: Record<string, unknown>) { Object.assign(values, update); },
+      async remove() {}
+    } } });
+    await expect(loadSettings()).rejects.toBeInstanceOf(InvalidLookupSettingsError);
+    expect(values['lookup.settings.v4']).toBe(original);
+    const recovered = await recoverInvalidSettings();
+    expect(recovered.lists).toHaveLength(1);
+    expect(recovered.lists[0]?.id).toBe('good');
+    expect(values['lookup.settings.v4.invalid']).toEqual(original);
+    expect((await loadSettings()).lists).toHaveLength(1);
+  });
+
+  it('keeps a disconnect marker while deleting cached rows', async () => {
+    const values: Record<string, unknown> = { 'lookup.cache.v2': { bundles: [legacyBundle] } };
+    vi.stubGlobal('browser', { storage: { local: {
+      async get(key: string) { return { [key]: values[key] }; },
+      async set(update: Record<string, unknown>) { Object.assign(values, update); },
+      async remove(key: string) { delete values[key]; }
+    } } });
+    await setGoogleDisconnected(true);
+    await clearCache();
+    expect(await isGoogleDisconnected()).toBe(true);
+    expect((await loadCache()).bundles).toEqual([]);
   });
 });

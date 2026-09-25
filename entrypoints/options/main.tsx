@@ -9,8 +9,13 @@ import {
   mapBundleToLookupList
 } from '../../lib/lists';
 import {
+  clearCache,
+  InvalidLookupSettingsError,
+  isGoogleDisconnected,
   loadCache,
+  loadInvalidSettingsBackup,
   loadSettings,
+  recoverInvalidSettings,
   saveCache,
   saveSettings,
   type LookupSettings
@@ -41,6 +46,8 @@ function sheetLabel(sheet: SpreadsheetInspection['sheets'][number]): string {
 
 function App() {
   const [settings, setSettings] = useState<LookupSettings>(initialSettings());
+  const [settingsReady, setSettingsReady] = useState(false);
+  const [settingsError, setSettingsError] = useState<Error | null>(null);
   const [draftUrl, setDraftUrl] = useState('');
   const [inspection, setInspection] = useState<SpreadsheetInspection | null>(null);
   const [sheetName, setSheetName] = useState('');
@@ -50,14 +57,19 @@ function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
-  const [connected, setConnected] = useState(false);
+  const [connected, setConnected] = useState<boolean | null>(null);
   const authInfo = getGoogleAuthRuntimeInfo();
 
   useEffect(() => {
     loadSettings().then((loaded) => {
       setSettings(loaded);
       setDraftUrl(loaded.legacySpreadsheetUrl ?? '');
-    });
+      setSettingsReady(true);
+    }).catch((error) => setSettingsError(error instanceof Error ? error : new Error(String(error))));
+    isGoogleDisconnected().then((disconnected) => {
+      if (disconnected) setConnected(false);
+      else getGoogleAccessToken(false).then(() => setConnected(true)).catch(() => setConnected(false));
+    }).catch(() => setConnected(false));
   }, []);
 
   const selectedSheet = useMemo(
@@ -147,9 +159,16 @@ function App() {
   async function disconnectGoogle() {
     setBusy(true);
     try {
-      await clearGoogleAuth();
+      const revoked = await clearGoogleAuth();
+      await clearCache();
       setConnected(false);
-      setMessage('Google接続を解除しました。');
+      setMessage(revoked
+        ? 'Googleの許可を取り消し、保存済みの検索データを削除しました。'
+        : 'この端末の接続と検索データを削除しました。Google側の許可を取り消せなかったため、Googleアカウントの「サードパーティとの接続」からLookupBoxを削除してください。');
+    } catch (error) {
+      await clearCache();
+      setConnected(false);
+      setMessage(error instanceof Error ? error.message : String(error));
     } finally {
       setBusy(false);
     }
@@ -313,6 +332,43 @@ function App() {
   const fieldStyle: React.CSSProperties = { display: 'grid', gap: 6, maxWidth: 360 };
   const selectStyle: React.CSSProperties = { width: '100%', minWidth: 0, padding: '6px 8px', boxSizing: 'border-box' };
 
+  if (!settingsReady) {
+    return <main style={{maxWidth:760, margin:'30px auto', fontFamily:'system-ui', padding:'0 18px'}}>
+      <h1>LookupBox 設定</h1>
+      {settingsError ? <section role="alert">
+        <p>{settingsError.message} 設定を読み込めない間は、上書きを防ぐため操作を停止しています。</p>
+        {settingsError instanceof InvalidLookupSettingsError && <>
+          <p>元の設定をJSONで保存できます。読み取れないリストを除いて続行すると、元の設定もブラウザ内にバックアップします。除いたリストは必要に応じて再登録してください。</p>
+          <button disabled={busy} onClick={async () => {
+            try {
+              const backup = await loadInvalidSettingsBackup();
+              const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = 'lookup-box-settings-backup.json';
+              document.body.appendChild(link);
+              link.click();
+              link.remove();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            } catch (error) { setMessage(error instanceof Error ? error.message : String(error)); }
+          }}>元の設定JSONを保存</button>{' '}
+          <button disabled={busy} onClick={async () => {
+            setBusy(true);
+            try {
+              const recovered = await recoverInvalidSettings();
+              setSettings(recovered);
+              setSettingsError(null);
+              setSettingsReady(true);
+              setMessage('読み取れるリストで復旧しました。元の設定はブラウザ内にもバックアップされています。');
+            } catch (error) { setMessage(error instanceof Error ? error.message : String(error)); }
+            finally { setBusy(false); }
+          }}>読み取れないリストを除いて続行</button>
+        </>}
+        <p>{message}</p>
+      </section> : <p>設定を読み込んでいます...</p>}
+    </main>;
+  }
+
   return (
     <main style={{maxWidth:760, margin:'30px auto', fontFamily:'system-ui', lineHeight:1.55, padding:'0 18px'}}>
       <h1>LookupBox 設定</h1>
@@ -320,7 +376,7 @@ function App() {
 
       <section style={{border:'1px solid #ddd', borderRadius:10, padding:16, marginBottom:22}}>
         <h2 style={{marginTop:0}}>Google接続</h2>
-        <p>現在: <strong>{connected ? '接続済み' : '未接続'}</strong></p>
+        <p>現在: <strong>{connected === null ? '確認中' : connected ? '接続済み' : '未接続'}</strong></p>
         <p>Googleの許可画面では、アクセスできるすべてのGoogleスプレッドシートの読み取り権限を求めます。LookupBoxは、入力したURLのシートを確認し、登録したリストのデータを同期・保存します。スプレッドシートを変更する権限は求めません。</p>
         {authInfo.configured ? (
           <div>

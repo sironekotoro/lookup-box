@@ -24,7 +24,7 @@ LookupBox stores the following information in the browser's local extension stor
 - a local cache of the rows used by registered lookup lists
 - last synchronization metadata
 
-This information remains in the user's browser profile until the user removes a list, clears extension storage, or uninstalls the extension.
+Registered list settings remain until the user removes a list, clears extension storage, or uninstalls the extension. Disconnecting Google deletes the locally cached rows and synchronization metadata, while retaining list settings for a future connection.
 
 ## Search terms
 
@@ -33,6 +33,7 @@ Search text entered into the LookupBox popup is processed locally in the browser
 ## OAuth credentials
 
 OAuth access tokens are used only to communicate directly with Google APIs. LookupBox does not send OAuth access tokens to a LookupBox developer-operated server.
+When the user disconnects, LookupBox sends the current access token to Google's revocation endpoint if it can obtain one. If Google revocation cannot be confirmed, the extension stops automatic access locally and explains how to remove the grant from Google Account settings.
 
 ## Network communication
 

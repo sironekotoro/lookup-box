@@ -6,12 +6,22 @@ const CACHE_KEY = 'lookup.cache.v2';
 const LEGACY_SETTINGS_V2_KEY = 'lookup.settings.v2';
 const LEGACY_SETTINGS_V3_KEY = 'lookup.settings.v3';
 const SETTINGS_KEY = 'lookup.settings.v4';
+const INVALID_SETTINGS_BACKUP_KEY = 'lookup.settings.v4.invalid';
+const DISCONNECTED_KEY = 'lookup.google.disconnected';
 
 export interface LookupSettings {
   useMock?: boolean;
   lists: LookupList[];
   legacySpreadsheetUrl?: string;
   legacySheetName?: string;
+}
+
+export class InvalidLookupSettingsError extends Error {
+  constructor(public readonly invalidCount: number, invalidShape = false) {
+    super(invalidShape
+      ? '保存済みのリスト設定の形式を読み取れません。設定は変更せずに保持しました。'
+      : `保存済みリストのうち${invalidCount}件を読み取れません。設定は変更せずに保持しました。`);
+  }
 }
 
 export type CacheValue = {
@@ -115,6 +125,19 @@ export async function saveCache(bundles: DatasetBundle[]): Promise<void> {
   });
 }
 
+export async function clearCache(): Promise<void> {
+  await browser.storage.local.remove(CACHE_KEY);
+}
+
+export async function isGoogleDisconnected(): Promise<boolean> {
+  const result = await browser.storage.local.get(DISCONNECTED_KEY);
+  return result[DISCONNECTED_KEY] === true;
+}
+
+export async function setGoogleDisconnected(disconnected: boolean): Promise<void> {
+  await browser.storage.local.set({ [DISCONNECTED_KEY]: disconnected });
+}
+
 async function saveCacheValue(value: CacheValue): Promise<void> {
   await browser.storage.local.set({ [CACHE_KEY]: value });
 }
@@ -148,8 +171,14 @@ export async function loadSettings(): Promise<LookupSettings> {
     CACHE_KEY
   ]);
   const current = result[SETTINGS_KEY];
-  if (current) {
+  if (Object.hasOwn(result, SETTINGS_KEY)) {
+    if (!current || typeof current !== 'object' || !Array.isArray((current as LookupSettings).lists)) {
+      throw new InvalidLookupSettingsError(0, true);
+    }
     const normalized = normalizeSettings(current);
+    if (normalized.lists.length !== (current as LookupSettings).lists.length) {
+      throw new InvalidLookupSettingsError((current as LookupSettings).lists.length - normalized.lists.length);
+    }
     if (JSON.stringify(current) !== JSON.stringify(normalized)) await saveSettings(normalized);
     return normalized;
   }
@@ -171,6 +200,26 @@ export async function loadSettings(): Promise<LookupSettings> {
   }
 
   return migrated;
+}
+
+export async function recoverInvalidSettings(): Promise<LookupSettings> {
+  const stored = await browser.storage.local.get([SETTINGS_KEY, INVALID_SETTINGS_BACKUP_KEY]);
+  const raw = stored[SETTINGS_KEY];
+  if (!Object.hasOwn(stored, SETTINGS_KEY)) throw new Error('復旧する設定が見つかりません。');
+  const validListArray = !!raw && typeof raw === 'object' && Array.isArray((raw as LookupSettings).lists);
+  const normalized = validListArray ? normalizeSettings(raw) : { lists: [] };
+  if (validListArray && normalized.lists.length === (raw as LookupSettings).lists.length) return loadSettings();
+  // Keep the first damaged version so repeated recovery cannot overwrite the backup.
+  if (stored[INVALID_SETTINGS_BACKUP_KEY] === undefined) {
+    await browser.storage.local.set({ [INVALID_SETTINGS_BACKUP_KEY]: raw });
+  }
+  await saveSettings(normalized);
+  return normalized;
+}
+
+export async function loadInvalidSettingsBackup(): Promise<unknown> {
+  const stored = await browser.storage.local.get([SETTINGS_KEY, INVALID_SETTINGS_BACKUP_KEY]);
+  return Object.hasOwn(stored, SETTINGS_KEY) ? stored[SETTINGS_KEY] : stored[INVALID_SETTINGS_BACKUP_KEY];
 }
 
 export async function saveSettings(settings: LookupSettings): Promise<void> {
