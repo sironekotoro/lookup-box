@@ -111,6 +111,10 @@ jobs:
               exit 1
             fi
 
+            if [[ "$zip" == *firefox*.zip ]]; then
+              node scripts/check-firefox-oauth-artifact.mjs "$tmp"
+            fi
+
             rm -rf "$tmp"
           done
 

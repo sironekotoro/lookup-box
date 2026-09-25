@@ -68,8 +68,9 @@
 
 ### Production Firefox authorization
 
-- [ ] Remove the development implicit-flow bridge from public builds
-- [ ] Implement/validate Google-supported public-client authorization using PKCE where applicable
+- [x] Remove the development implicit-flow bridge from public builds and check the Firefox ZIP in CI (Issue #27)
+- [x] Implement Firefox authorization code + PKCE without a client secret (Issue #27)
+- [ ] Configure Firefox Desktop app OAuth client and validate the new flow against Google (Issue #27)
 - [ ] Test token expiry, revoke, reconnect, and account switching
 - [ ] Finalize Firefox `data_collection_permissions` against the frozen data flow
 

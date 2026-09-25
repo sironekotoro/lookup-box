@@ -35,7 +35,7 @@ However, this is not a simple scope-string replacement. Google Picker's normal w
 
 A remotely hosted Picker page that receives OAuth tokens would broaden LookupBox's data-flow/security surface and is not the preferred architecture.
 
-The investigation also considered Google's browser-mediated Picker / OnePick flow (`trigger_onepick=true`) and a public-client-safe authorization-code + PKCE flow without a LookupBox-operated token-bearing remote page. Compatibility in Chrome and Firefox was not established in an end-to-end test. These open questions do not change the scope decision: a working Picker flow would still authorize write access to selected files.
+The investigation also considered Google's browser-mediated Picker / OnePick flow (`trigger_onepick=true`). Firefox now uses authorization-code + PKCE with the read-only Sheets scope, but its new flow has not yet been tested end-to-end with a Desktop app OAuth client. A working Picker flow would still authorize write access to selected files, so these questions do not change the scope decision.
 
 If the per-file design is reconsidered in the future, do not change the production scope until a spike proves all of the following:
 
@@ -69,11 +69,9 @@ The custom domain must be verified in Google Search Console by an owner/editor o
 
 ### Firefox authorization flow
 
-The current Firefox path exists as a development bridge and uses `identity.launchWebAuthFlow()` with a legacy implicit-style token response.
+Firefox now uses `identity.launchWebAuthFlow()` to receive an authorization code through Firefox's loopback identity redirect. It exchanges that code with Google using a one-time PKCE S256 verifier and a **Desktop app** OAuth client ID. Only the resulting short-lived access token stays in memory; no client secret or refresh token is stored. The Firefox manifest permits `https://oauth2.googleapis.com/token` for this exchange and supports Firefox 140+.
 
-Google currently recommends authorization code + PKCE for modern browser authorization and discourages direct use of the implicit grant. The public Firefox build must not ship the development implicit bridge unchanged.
-
-The least-privilege spike should therefore be treated as an auth architecture milestone, not as a scope-only edit.
+CI checks the Firefox package ZIP for the code/PKCE flow and rejects the former implicit `response_type=token` path. The CI client ID must be switched from the previous **Web application** client to a new **Desktop app** client before a packaged build can connect. Test the new path against Google in Firefox before AMO submission, including expiry, disconnect, reconnection, and account switching. See `docs/OAUTH_SETUP.md` and #27.
 
 ### Firefox data collection declaration
 
@@ -109,8 +107,9 @@ Do not assume the unpacked development ID and the Web Store production ID are in
 
 ### Phase C — production authorization
 
-- [ ] Remove Firefox implicit bridge from public builds
-- [ ] Implement Google-supported public-client auth with PKCE where applicable
+- [x] Remove Firefox implicit bridge from public builds and gate the Firefox ZIP in CI
+- [x] Implement Firefox authorization code + PKCE without a client secret
+- [ ] Configure a Desktop app OAuth client ID for Firefox CI and local testing
 - [ ] Test token expiry, revocation, reconnect, and account switching
 - [ ] Confirm no client secret exists in source, generated bundles, or CI artifacts
 
@@ -140,6 +139,10 @@ Required so the extension can read spreadsheet metadata and formatted cell value
 ### `https://oauth2.googleapis.com/revoke`
 
 Required only when the user chooses **Disconnect**. LookupBox sends the current OAuth access token directly to Google's revocation endpoint and clears its local synchronized rows. If Google does not confirm revocation, the extension stops silent access locally and directs the user to revoke access in their Google Account.
+
+### `https://oauth2.googleapis.com/token` (Firefox only)
+
+Required to exchange the one-time authorization code for a short-lived Google access token using PKCE. The request contains the Desktop app client ID, code, verifier, and loopback redirect URI; it does not contain Sheet contents, search terms, or a client secret.
 
 ## Security / review invariants
 

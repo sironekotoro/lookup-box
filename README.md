@@ -48,7 +48,7 @@ WXT supports browser-specific targets through `-b chrome` and `-b firefox`.
 OAuth client IDs are build-time configuration, not end-user settings.
 
 - Chrome: `WXT_GOOGLE_CHROME_CLIENT_ID`
-- Firefox development bridge: `WXT_GOOGLE_FIREFOX_CLIENT_ID`
+- Firefox Desktop app OAuth client for PKCE: `WXT_GOOGLE_FIREFOX_CLIENT_ID`
 
 The extension currently requests the read-only Sheets scope:
 
@@ -56,7 +56,7 @@ The extension currently requests the read-only Sheets scope:
 
 Normal users install LookupBox, click **Googleに接続**, paste a Google Sheet URL, and register the list. No GAS URL or API Token is present in the standard build.
 
-Public distribution hardening is in progress. The read-only Sheets scope is the chosen public scope and requires Google OAuth sensitive-scope verification. The Firefox development auth bridge still needs a production replacement; see `docs/PUBLIC_DISTRIBUTION.md`.
+Public distribution hardening is in progress. The read-only Sheets scope is the chosen public scope and requires Google OAuth sensitive-scope verification. Firefox now uses authorization code + PKCE; it still needs live validation with a Desktop app OAuth client and the AMO data declaration in #28. See `docs/PUBLIC_DISTRIBUTION.md`.
 
 See `docs/OAUTH_SETUP.md` for the development Google Cloud setup.
 

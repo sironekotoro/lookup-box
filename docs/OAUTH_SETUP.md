@@ -60,26 +60,25 @@ The OAuth client ID is an application identifier, not a secret. Do not add a cli
 
 Before Chrome Web Store publication, verify that the production Web Store identity matches the OAuth client strategy. If the store identity changes, create a production OAuth client for that production ID.
 
-## Firefox development bridge
+## Firefox authorization code + PKCE
 
-Firefox does not expose Chrome's `getAuthToken()` API. LookupBox keeps the browser difference behind the Google auth adapter and currently uses `identity.launchWebAuthFlow()` for the Firefox development bridge.
+Firefox does not expose Chrome's `getAuthToken()` API. LookupBox uses `identity.launchWebAuthFlow()` to receive a Google authorization code and exchanges it directly for a short-lived access token using PKCE (S256). It keeps the access token in memory, does not save refresh tokens, and sends no client secret.
 
 The Firefox manifest uses a fixed Gecko extension ID:
 
 `lookupbox@sironekotoro.com`
 
-Firefox's normal identity redirect URL uses a Mozilla-owned dummy domain. LookupBox converts that identity to the loopback form supported by Firefox 86+:
+Firefox's normal identity redirect URL uses a Mozilla-owned dummy domain. LookupBox converts that identity to the loopback form supported by Firefox 86+. The manifest requires Firefox 140+ to prepare for the built-in AMO data consent declaration tracked in #28:
 
 `http://127.0.0.1/mozoauth2/<stable-subdomain>`
 
-The LookupBox settings page shows the exact URI to register.
+The LookupBox settings page shows the actual loopback URI used by the browser. A Desktop OAuth client permits the loopback redirect without registering an exact URI in Google Cloud.
 
 1. Install the Firefox build temporarily from `about:debugging`.
 2. Open LookupBox settings.
 3. Expand **開発情報** and copy the displayed `redirect URL`.
-4. In Google Cloud, create a **Web application** OAuth client for the Firefox development bridge.
-5. Register the exact redirect URL shown by LookupBox as an authorized redirect URI.
-6. Copy the generated client ID.
+4. In Google Cloud, create a new OAuth client of application type **Desktop app** in the same project. The previous Firefox **Web application** client ID is not valid for this secretless token exchange.
+5. Copy the new Desktop app client ID only; do not copy its client secret into the extension, repository, or Actions variables.
 
 For a local Firefox build:
 
@@ -95,7 +94,9 @@ gh variable set WXT_GOOGLE_FIREFOX_CLIENT_ID \
   --body '...apps.googleusercontent.com'
 ```
 
-The current Firefox bridge receives a short-lived access token and does not store a refresh token. This path remains development-oriented until the public-release authorization design is finalized.
+Replace the existing `WXT_GOOGLE_FIREFOX_CLIENT_ID` value in CI with this new Desktop app client ID before testing a Firefox build from Actions. The old Web application client ID can remain in Google Cloud during migration, but a build that still uses it cannot complete the new Firefox token exchange. A locally loaded Firefox build also needs its own `.env.firefox.local` value. Build success alone does not confirm live Google authorization.
+
+After configuring the client, verify Google connect, search, token expiry, disconnect/revoke, reconnect, and account switching in Firefox. The user data declaration and AMO consent screen are tracked separately in #28.
 
 ## Build
 

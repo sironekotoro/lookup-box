@@ -8,7 +8,7 @@ LookupBox keeps search, list identity, and source access separated.
 LookupBox extension
   -> Google auth adapter
        -> Chrome: chrome.identity.getAuthToken()
-       -> Firefox development bridge: identity.launchWebAuthFlow()
+       -> Firefox: identity.launchWebAuthFlow() + PKCE code exchange
   -> Google Sheets API
   -> browser.storage.local cache
   -> popup search / copy
@@ -46,7 +46,7 @@ The extension requests:
 
 Chrome uses the platform-native Identity API token cache and expiration handling through `chrome.identity.getAuthToken()`.
 
-Firefox does not expose Chrome's `getAuthToken()` API. The current development bridge isolates its `identity.launchWebAuthFlow()` implementation behind the same adapter and uses a fixed Gecko extension ID plus loopback redirect. The Firefox bridge is intentionally marked development-only until the public-release authorization design is hardened.
+Firefox does not expose Chrome's `getAuthToken()` API. Its adapter uses `identity.launchWebAuthFlow()` with a fixed Gecko extension ID and loopback redirect. A one-time PKCE verifier and OAuth state protect each authorization code exchange with Google. Only the access token is retained in memory. The corresponding Desktop app OAuth client ID must be configured for Firefox; live validation and the AMO data declaration remain release checks.
 
 OAuth client IDs are build-time application configuration and are not end-user secrets or user settings.
 
@@ -73,7 +73,7 @@ Google Sheets API, SQLite, CSV, and future sources remain behind provider bounda
 
 ## Artifact security boundary
 
-CI unpacks both browser package ZIPs and rejects a build if it contains the previous gateway host permissions or runtime setup strings. This makes the OAuth-only distribution boundary executable rather than documentation-only.
+CI unpacks both browser package ZIPs and rejects a build if it contains the previous gateway host permissions or runtime setup strings. It also checks the Firefox ZIP for PKCE code exchange and rejects a legacy implicit OAuth response type.
 
 ## Public-distribution direction
 
