@@ -87,7 +87,7 @@ See `docs/PUBLIC_DISTRIBUTION.md` and Issue #9 for the detailed acceptance crite
 
 ## Code quality and data flow
 
-- [ ] Measure complexity with pinned `cccc` in CI; set an actionable baseline and thresholds (Issue #23)
+- [x] Measure complexity with pinned `cccc` in CI; report growth against an observed baseline (Issue #23)
 - [x] Serialize source → local cache → search/copy updates across extension pages, including concurrent sync handling (Issue #24)
 - [ ] State the one-way source-of-truth and derived-cache rule in `AGENTS.md` and `docs/ARCHITECTURE.md` (Issue #25)
 

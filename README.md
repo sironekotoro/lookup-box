@@ -91,6 +91,8 @@ The editable master is `assets/branding/lookupbox-icon.svg`. Browser-ready 16/32
 
 `.github/workflows/build-extensions.yml` runs typecheck/tests, generates Chrome and Firefox ZIP artifacts, verifies the release version and icon assets, and rejects packages that contain legacy GAS host permissions or runtime strings.
 
+CI also reports TypeScript function complexity using pinned `cccc`; see `docs/COMPLEXITY.md` for the measured baseline and warning policy.
+
 GitHub Actions reads OAuth client IDs from repository variables named:
 
 - `WXT_GOOGLE_CHROME_CLIENT_ID`
@@ -133,4 +135,5 @@ See:
 - `docs/RELEASE_CHECKLIST.md`
 - `docs/VERSIONING.md`
 - `docs/ROADMAP.md`
+- `docs/COMPLEXITY.md`
 - `AGENTS.md`

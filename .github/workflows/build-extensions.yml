@@ -34,6 +34,14 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Install pinned cccc v1.6.0
+        uses: moznion/cccc-action@4df3f72f581c87d0792ca89ef401c4ec8e85788b # v1.1.0
+        with:
+          version: v1.6.0
+
+      - name: Report TypeScript complexity
+        run: npm run complexity
+
       - name: Build Chrome package
         run: npm run zip:chrome
 
