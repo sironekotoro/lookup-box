@@ -14,6 +14,7 @@
     "zip:firefox": "wxt zip -b firefox",
     "typecheck": "tsc --noEmit",
     "complexity": "node scripts/complexity.mjs",
+    "verify:chrome-zip": "node scripts/verify-chrome-zip.mjs",
     "test": "vitest run",
     "check": "npm run typecheck && npm test",
     "postinstall": "wxt prepare"

@@ -48,6 +48,10 @@ jobs:
       - name: Build Firefox package
         run: npm run zip:firefox
 
+      - name: Verify configured Chrome OAuth ZIP
+        if: env.WXT_GOOGLE_CHROME_CLIENT_ID != ''
+        run: npm run verify:chrome-zip
+
       - name: Verify OAuth-only artifacts
         shell: bash
         run: |

@@ -118,6 +118,7 @@ Store submission work is tracked in `docs/PUBLIC_DISTRIBUTION.md` and Issue #9. 
 
 - `docs/STORE_LISTING.md`
 - `docs/RELEASE_CHECKLIST.md`
+- `docs/CHROME_RELEASE_PREP.md`
 
 ## Historical gateway
 

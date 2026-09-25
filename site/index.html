@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>LookupBox</title>
-  <meta name="description" content="Google Sheetsなどの参照リストを、ブラウザからすぐ検索・コピーする拡張機能 LookupBox。">
+  <meta name="description" content="Google Sheetsの参照リストを、ブラウザからすぐ検索・コピーする拡張機能 LookupBox。">
   <style>
     :root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1f2328;background:#fff}
     body{margin:0}.wrap{max-width:880px;margin:auto;padding:48px 22px 72px}.hero{display:flex;align-items:center;gap:20px;margin-bottom:8px}.hero img{width:96px;height:96px;flex:none}.hero-copy{min-width:0}h1{font-size:42px;margin:0 0 8px}.lead{font-size:20px;color:#59636e;margin:0 0 36px}h2{margin-top:42px}code{background:#f1f3f5;padding:2px 5px;border-radius:5px}.box{background:#f7f8fa;border:1px solid #d8dee4;border-radius:12px;padding:20px;margin:18px 0}.steps{line-height:1.9}.small{color:#656d76;font-size:14px}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #d8dee4;padding:9px;text-align:left}a{color:#0969da}.footer{margin-top:48px;padding-top:18px;border-top:1px solid #d8dee4}@media(max-width:520px){.hero img{width:76px;height:76px}.hero{gap:14px}h1{font-size:36px}}
@@ -45,17 +45,18 @@
   <p>複数のSpreadsheetやタブを登録できます。同じSpreadsheetから複数リストを作る場合は、<code>Spreadsheet名 / Sheet名</code> のように自動で区別します。</p>
 
   <h2>権限と接続</h2>
-  <p>標準のChrome / FirefoxパッケージはGoogle Sheets APIへ直接接続します。旧ゲートウェイ用のホスト権限や設定項目は配布パッケージから削除しています。</p>
+  <p>Googleの許可は、接続したアカウントがアクセスできる<strong>すべてのGoogleスプレッドシートの読み取り</strong>を対象とします。LookupBoxが取得するのは、入力したURLのシートの確認と、登録したリストの同期に必要なデータです。スプレッドシートを変更する権限は求めません。</p>
+  <p>同期した行とリスト設定はブラウザ内に保存し、検索とコピーはローカルで行います。接続を解除すると同期した行データを消去し、リスト設定は再接続のために残します。詳しくは<a href="privacy.html">LookupBox プライバシーポリシー</a>をご覧ください。</p>
 
   <h2>対応ブラウザ</h2>
-  <p>同一コードベースからChrome / Firefox向けパッケージをGitHub Actionsで生成します。</p>
+  <p>同一コードベースからChrome / Firefox向けパッケージを生成しています。両ブラウザの開発版で動作を確認しています。Firefoxの公開版は認証方式の見直しが終わるまで提出しません。</p>
 
   <h2>ロードマップ</h2>
   <ul class="steps">
-    <li>Google Picker / 最小権限化</li>
-    <li>OAuth公開審査・ストア公開対応</li>
+    <li>Google OAuthの公開審査・Chrome Web Storeへの提出準備</li>
+    <li>Firefoxの公開用認証方式とデータ取扱いの申告</li>
     <li>Local SQLite / CSV対応</li>
-    <li>Chrome Web Store / Firefox Add-ons公開</li>
+    <li>両ブラウザの公式ストアでの公開</li>
   </ul>
 
   <div class="footer small">

@@ -26,6 +26,8 @@ LookupBox stores the following information in the browser's local extension stor
 
 Registered list settings remain until the user removes a list, clears extension storage, or uninstalls the extension. Disconnecting Google deletes the locally cached rows and synchronization metadata, while retaining list settings for a future connection.
 
+Browser extension storage is isolated from ordinary web pages, and LookupBox does not send the stored rows to a developer-operated server. The rows are kept on the user's device; someone with access to that device or browser profile may be able to view locally stored data. LookupBox does not claim that the local cache is encrypted. Users can remove a list in settings, disconnect Google to clear cached rows, or clear the extension's storage/uninstall the extension to remove remaining settings.
+
 ## Search terms
 
 Search text entered into the LookupBox popup is processed locally in the browser. LookupBox does not send popup search terms to the developer or to an analytics service.
@@ -48,6 +50,8 @@ LookupBox does not include advertising, analytics beacons, third-party tracking,
 ## Selling or sharing data
 
 LookupBox does not sell personal information or lookup-list data. LookupBox does not share lookup-list data with third parties for advertising or profiling.
+
+LookupBox does not use data obtained from Google Workspace APIs to develop, improve, or train generalized AI or machine-learning models.
 
 ## Changes to this policy
 
