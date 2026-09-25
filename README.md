@@ -4,7 +4,7 @@
 
 LookupBox turns reference lists into a small, fast browser lookup tool.
 
-Current product direction: multiple Google Sheet-backed lookup lists with direct Google OAuth + Sheets API. Standard Chrome/Firefox distribution artifacts are OAuth-only; the old GAS gateway is retained in the repository only as historical/reference material.
+Current product direction: multiple Google Sheet-backed lookup lists with direct Google OAuth + Sheets API. Standard Chrome/Firefox distribution artifacts are OAuth-only; the old GAS gateway source has been removed.
 
 ## Current features
 
@@ -117,9 +117,9 @@ Store submission work is tracked in `docs/PUBLIC_DISTRIBUTION.md` and Issue #9. 
 - `docs/STORE_LISTING.md`
 - `docs/RELEASE_CHECKLIST.md`
 
-## Historical GAS reference
+## Historical gateway
 
-The previous gateway implementation remains in `gas/Code.gs` for historical/reference purposes only. Standard extension builds do not import it, expose its settings, or request its host permissions.
+The previous GAS gateway source has been removed from the repository. Standard extension builds do not include a gateway runtime, expose its settings, or request its host permissions. Older installations can still migrate compatible list definitions and cached rows; see `docs/OAUTH_SETUP.md`.
 
 ## Design notes
 

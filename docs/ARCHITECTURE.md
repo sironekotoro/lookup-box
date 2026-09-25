@@ -16,7 +16,7 @@ LookupBox extension
 
 The standard Chrome and Firefox distribution artifacts are OAuth-only. They do not request gateway host permissions and do not include a gateway runtime provider.
 
-The previous `gas/Code.gs` implementation remains in the repository only as historical/reference material.
+The historical GAS gateway source has been removed from the repository. Older installations can still migrate compatible list definitions and cached rows.
 
 ## Lookup list model
 

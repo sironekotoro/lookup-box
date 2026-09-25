@@ -47,7 +47,7 @@
 - [x] Remove runtime gateway provider from standard extension source path
 - [x] Migrate settings to OAuth-only schema and discard old connection credentials
 - [x] Add CI package audit for forbidden gateway runtime strings/permissions
-- [x] Keep historical gateway code only as repository reference material
+- [x] Remove historical GAS gateway source from the repository (Issue #31)
 
 ## Public distribution hardening
 
