@@ -22,7 +22,7 @@ LookupBox stores the following information in the browser's local extension stor
 
 - registered Spreadsheet URL/ID and title
 - selected Sheet/tab name
-- selected key/value column names
+- selected search, display, and copy column names
 - a local cache of the rows used by registered lookup lists
 - last synchronization metadata
 

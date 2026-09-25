@@ -11,14 +11,11 @@ export function makeGoogleSourceProvider(
 }
 
 export function listLoadOptions(list: LookupList): GoogleSheetLoadOptions {
-  const columns = list.keyColumn === list.valueColumn
-    ? [list.keyColumn]
-    : [list.keyColumn, list.valueColumn];
   return {
     spreadsheetUrl: list.spreadsheetUrl,
     sheetName: list.sheetName,
-    searchColumns: columns,
-    displayColumns: columns,
-    copyColumns: columns
+    searchColumns: list.searchColumns,
+    displayColumns: list.displayColumns,
+    copyColumns: list.copyColumns
   };
 }

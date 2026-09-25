@@ -29,24 +29,39 @@ function text(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
-function isLookupList(value: unknown): value is LookupList {
-  if (!value || typeof value !== 'object') return false;
-  const list = value as Partial<LookupList>;
-  return [
+function normalizeLookupList(value: unknown): LookupList | null {
+  if (!value || typeof value !== 'object') return null;
+  const list = value as Partial<LookupList> & { keyColumn?: string; valueColumn?: string };
+  if (![
     list.id,
     list.spreadsheetId,
     list.spreadsheetUrl,
     list.spreadsheetTitle,
     list.sheetName,
-    list.keyColumn,
-    list.valueColumn
-  ].every((part) => typeof part === 'string' && part.length > 0);
+  ].every((part) => typeof part === 'string' && part.length > 0)) return null;
+
+  const legacyColumns = [list.keyColumn, list.valueColumn]
+    .filter((column): column is string => typeof column === 'string' && column.length > 0);
+  const legacySelection = [...new Set(legacyColumns)];
+  const validColumns = (columns: unknown): columns is string[] =>
+    Array.isArray(columns) && columns.every((column) => typeof column === 'string' && column.length > 0)
+    && new Set(columns).size === columns.length;
+  const searchColumns = validColumns(list.searchColumns) ? list.searchColumns : legacySelection;
+  const displayColumns = validColumns(list.displayColumns) ? list.displayColumns : legacySelection;
+  const copyColumns = validColumns(list.copyColumns) ? list.copyColumns : legacySelection;
+  if (searchColumns.length === 0 || displayColumns.length === 0) return null;
+  if (copyColumns.some((column) => !displayColumns.includes(column))) return null;
+  return {
+    id: list.id!, spreadsheetId: list.spreadsheetId!, spreadsheetUrl: list.spreadsheetUrl!,
+    spreadsheetTitle: list.spreadsheetTitle!, sheetName: list.sheetName!,
+    searchColumns, displayColumns, copyColumns
+  };
 }
 
 export function normalizeSettings(raw: unknown, cache?: Partial<CacheValue>): LookupSettings {
   const source = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
   if (Array.isArray(source.lists)) {
-    const lists = source.lists.filter(isLookupList);
+    const lists = source.lists.map(normalizeLookupList).filter((list): list is LookupList => list !== null);
     return {
       useMock: source.useMock === true && lists.length === 0,
       lists,
@@ -77,8 +92,9 @@ export function normalizeSettings(raw: unknown, cache?: Partial<CacheValue>): Lo
         spreadsheetUrl,
         spreadsheetTitle: 'Google Sheet',
         sheetName,
-        keyColumn,
-        valueColumn
+        searchColumns: [...new Set([keyColumn, valueColumn])],
+        displayColumns: [...new Set([keyColumn, valueColumn])],
+        copyColumns: [...new Set([keyColumn, valueColumn])]
       });
     } catch {
       // Preserve the source URL/name below so the settings screen can repair it.
@@ -86,7 +102,7 @@ export function normalizeSettings(raw: unknown, cache?: Partial<CacheValue>): Lo
   }
 
   return {
-    useMock: legacy.useMock === true,
+    useMock: legacy.useMock === true && lists.length === 0,
     lists,
     legacySpreadsheetUrl: spreadsheetUrl,
     legacySheetName: sheetName
@@ -132,7 +148,11 @@ export async function loadSettings(): Promise<LookupSettings> {
     CACHE_KEY
   ]);
   const current = result[SETTINGS_KEY];
-  if (current) return normalizeSettings(current);
+  if (current) {
+    const normalized = normalizeSettings(current);
+    if (JSON.stringify(current) !== JSON.stringify(normalized)) await saveSettings(normalized);
+    return normalized;
+  }
 
   const cached = result[CACHE_KEY] as Partial<CacheValue> | undefined;
   const legacy = result[LEGACY_SETTINGS_V3_KEY] ?? result[LEGACY_SETTINGS_V2_KEY];

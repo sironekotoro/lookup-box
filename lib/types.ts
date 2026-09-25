@@ -30,8 +30,9 @@ export interface LookupList {
   spreadsheetUrl: string;
   spreadsheetTitle: string;
   sheetName: string;
-  keyColumn: string;
-  valueColumn: string;
+  searchColumns: string[];
+  displayColumns: string[];
+  copyColumns: string[];
 }
 
 export interface SheetInspection {

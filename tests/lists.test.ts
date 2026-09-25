@@ -19,7 +19,7 @@ const inspection: SpreadsheetInspection = {
 
 describe('lookup list helpers', () => {
   it('always gives registered lists priority over stale demo mode', () => {
-    const list = createLookupList(inspection, inspection.spreadsheetId, 'US', 'Name', 'Code');
+    const list = createLookupList(inspection, inspection.spreadsheetId, 'US', ['Name', 'Code'], ['Name', 'Code'], ['Name', 'Code']);
     const demo: DatasetBundle = {
       definition: {
         dataset_id: 'companies', display_name: 'Demo', sheet_name: 'companies',
@@ -43,19 +43,23 @@ describe('lookup list helpers', () => {
   });
 
   it('derives display names without asking the user for a list name', () => {
-    const us = createLookupList(inspection, inspection.spreadsheetId, 'US', 'Name', 'Code');
+    const us = createLookupList(inspection, inspection.spreadsheetId, 'US', ['Name', 'Code'], ['Name', 'Code'], ['Name', 'Code']);
     expect(getLookupListDisplayName(us, [us])).toBe('Stocks');
 
-    const jp = createLookupList(inspection, inspection.spreadsheetId, 'JP', 'Name', 'Code');
+    const jp = createLookupList(inspection, inspection.spreadsheetId, 'JP', ['Name', 'Code'], ['Name', 'Code'], ['Name', 'Code']);
     expect(getLookupListDisplayName(us, [us, jp])).toBe('Stocks / US');
     expect(getLookupListDisplayName(jp, [us, jp])).toBe('Stocks / JP');
 
-    const usSector = createLookupList(inspection, inspection.spreadsheetId, 'US', 'Name', 'Sector');
+    const usSector = createLookupList(inspection, inspection.spreadsheetId, 'US', ['Name', 'Sector'], ['Name', 'Sector'], ['Name', 'Sector']);
     expect(getLookupListDisplayName(us, [us, usSector])).toBe('Stocks / US (Name → Code)');
+
+    const sameDisplay = createLookupList(inspection, inspection.spreadsheetId, 'US', ['Sector'], ['Name', 'Code'], ['Code']);
+    expect(getLookupListDisplayName(us, [us, sameDisplay])).toBe('Stocks / US (Name → Code; 検索: Name、Code)');
+    expect(us.id).not.toBe(sameDisplay.id);
   });
 
-  it('maps a provider bundle to the selected key/value columns', () => {
-    const list = createLookupList(inspection, inspection.spreadsheetId, 'US', 'Name', 'Code');
+  it('maps a provider bundle to the configured columns', () => {
+    const list = createLookupList(inspection, inspection.spreadsheetId, 'US', ['Sector', 'Name'], ['Code', 'Name', 'Sector'], ['Code']);
     const bundle: DatasetBundle = {
       definition: {
         dataset_id: 'us',
@@ -74,9 +78,10 @@ describe('lookup list helpers', () => {
     const mapped = mapBundleToLookupList(bundle, list, [list]);
     expect(mapped.definition.dataset_id).toBe(list.id);
     expect(mapped.definition.display_name).toBe('Stocks');
-    expect(mapped.definition.search_columns).toEqual(['Name', 'Code']);
-    expect(mapped.definition.display_columns).toEqual(['Name', 'Code']);
-    expect(mapped.definition.copy_columns).toEqual(['Name', 'Code']);
+    expect(mapped.definition.search_columns).toEqual(['Sector', 'Name']);
+    expect(mapped.definition.display_columns).toEqual(['Code', 'Name', 'Sector']);
+    expect(mapped.definition.copy_columns).toEqual(['Code']);
+    expect(mapped.definition.primary_key).toBe('Sector');
     expect(mapped.rows[0]?.Sector).toBe('Technology');
   });
 });

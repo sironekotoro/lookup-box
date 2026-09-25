@@ -44,8 +44,10 @@ function App() {
   const [draftUrl, setDraftUrl] = useState('');
   const [inspection, setInspection] = useState<SpreadsheetInspection | null>(null);
   const [sheetName, setSheetName] = useState('');
-  const [keyColumn, setKeyColumn] = useState('');
-  const [valueColumn, setValueColumn] = useState('');
+  const [searchColumns, setSearchColumns] = useState<string[]>([]);
+  const [displayColumns, setDisplayColumns] = useState<string[]>([]);
+  const [copyColumns, setCopyColumns] = useState<string[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [connected, setConnected] = useState(false);
@@ -67,8 +69,57 @@ function App() {
     setSheetName(nextSheetName);
     const sheet = currentInspection?.sheets.find((candidate) => candidate.name === nextSheetName);
     const headers = sheet?.headers.filter(Boolean) ?? [];
-    setKeyColumn(headers[0] ?? '');
-    setValueColumn(headers[1] ?? headers[0] ?? '');
+    const defaults = headers.slice(0, 2);
+    setSearchColumns(defaults);
+    setDisplayColumns(defaults);
+    setCopyColumns(defaults);
+  }
+
+  function toggleColumn(column: string, group: 'search' | 'display' | 'copy') {
+    if (group === 'search') {
+      setSearchColumns((current) => current.includes(column)
+        ? current.filter((item) => item !== column) : [...current, column]);
+    } else if (group === 'display') {
+      setDisplayColumns((current) => current.includes(column)
+        ? current.filter((item) => item !== column) : [...current, column]);
+      setCopyColumns((current) => current.filter((item) => item !== column));
+    } else {
+      setCopyColumns((current) => current.includes(column)
+        ? current.filter((item) => item !== column) : [...current, column]);
+    }
+  }
+
+  function moveDisplayColumn(column: string, direction: -1 | 1) {
+    setDisplayColumns((current) => {
+      const index = current.indexOf(column);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+      const next = [...current];
+      [next[index], next[nextIndex]] = [next[nextIndex]!, next[index]!];
+      return next;
+    });
+  }
+
+  async function editList(list: LookupList) {
+    setBusy(true);
+    setMessage('登録済みリストの列を確認しています...');
+    try {
+      const result = await makeGoogleSourceProvider().inspect(list.spreadsheetUrl);
+      const sheet = result.sheets.find((candidate) => candidate.name === list.sheetName);
+      if (!sheet) throw new Error(`タブ「${list.sheetName}」が見つかりません。`);
+      setDraftUrl(list.spreadsheetUrl);
+      setInspection(result);
+      setSheetName(list.sheetName);
+      setSearchColumns(list.searchColumns);
+      setDisplayColumns(list.displayColumns);
+      setCopyColumns(list.copyColumns);
+      setEditingId(list.id);
+      setMessage('列を変更して「設定を保存して同期」を押してください。');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function connectGoogle() {
@@ -157,14 +208,31 @@ function App() {
       setMessage('先にGoogle Sheetを確認してください。');
       return;
     }
-    if (!keyColumn || !valueColumn) {
-      setMessage('Key列とValue列を選択してください。');
+    if (searchColumns.length === 0 || displayColumns.length === 0) {
+      setMessage('検索対象列と表示列をそれぞれ1つ以上選択してください。');
+      return;
+    }
+
+    const headers = selectedSheet.headers.filter(Boolean);
+    if ([...searchColumns, ...displayColumns, ...copyColumns].some((column) => !headers.includes(column))) {
+      setMessage('選択した列がSheetにありません。列を確認してください。');
       return;
     }
 
     setBusy(true);
     try {
-      const list = createLookupList(inspection, draftUrl, selectedSheet.name, keyColumn, valueColumn);
+      const candidate = createLookupList(
+        inspection, draftUrl, selectedSheet.name, searchColumns, displayColumns, copyColumns
+      );
+      const matching = settings.lists.find((current) => current.spreadsheetId === candidate.spreadsheetId
+        && current.sheetName === candidate.sheetName
+        && JSON.stringify([current.searchColumns, current.displayColumns, current.copyColumns])
+          === JSON.stringify([searchColumns, displayColumns, copyColumns]));
+      if (matching && matching.id !== editingId) {
+        if (editingId) throw new Error('同じ列設定のリストが既に登録されています。');
+        throw new Error('この列設定のリストは既に登録されています。編集から変更してください。');
+      }
+      const list = { ...candidate, id: editingId ?? candidate.id };
       const nextLists = [...settings.lists.filter((candidate) => candidate.id !== list.id), list];
       const bundle = await loadListBundle(list, nextLists);
       const cache = await loadCache();
@@ -182,11 +250,13 @@ function App() {
       await saveSettings(next);
       setSettings(next);
       setConnected(true);
-      setMessage(`✓ ${getLookupListDisplayName(list, nextLists)} を登録・同期しました。`);
+      setMessage(`✓ ${getLookupListDisplayName(list, nextLists)} を${editingId ? '更新' : '登録'}・同期しました。`);
       setInspection(null);
       setSheetName('');
-      setKeyColumn('');
-      setValueColumn('');
+      setSearchColumns([]);
+      setDisplayColumns([]);
+      setCopyColumns([]);
+      setEditingId(null);
       setDraftUrl('');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
@@ -216,30 +286,32 @@ function App() {
   }
 
   async function removeList(listId: string) {
-    const nextLists = settings.lists.filter((list) => list.id !== listId);
-    const next = { ...settings, lists: nextLists, useMock: false };
-    const cache = await loadCache();
-    await saveCache(applyLookupListDisplayNames(
-      activeLookupBundles(cache.bundles, nextLists),
-      nextLists
-    ));
-    await saveSettings(next);
-    setSettings(next);
-    setMessage('リストを削除しました。');
+    setBusy(true);
+    try {
+      const nextLists = settings.lists.filter((list) => list.id !== listId);
+      const next = { ...settings, lists: nextLists, useMock: false };
+      const cache = await loadCache();
+      await saveCache(applyLookupListDisplayNames(
+        activeLookupBundles(cache.bundles, nextLists),
+        nextLists
+      ));
+      await saveSettings(next);
+      setSettings(next);
+      setMessage('リストを削除しました。');
+      if (editingId === listId) {
+        setEditingId(null);
+        setInspection(null);
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
   }
 
   const headers = selectedSheet?.headers.filter(Boolean) ?? [];
-  const fieldStyle: React.CSSProperties = {
-    display: 'grid',
-    gap: 6,
-    maxWidth: 360
-  };
-  const selectStyle: React.CSSProperties = {
-    width: '100%',
-    minWidth: 0,
-    padding: '6px 8px',
-    boxSizing: 'border-box'
-  };
+  const fieldStyle: React.CSSProperties = { display: 'grid', gap: 6, maxWidth: 360 };
+  const selectStyle: React.CSSProperties = { width: '100%', minWidth: 0, padding: '6px 8px', boxSizing: 'border-box' };
 
   return (
     <main style={{maxWidth:760, margin:'30px auto', fontFamily:'system-ui', lineHeight:1.55, padding:'0 18px'}}>
@@ -278,10 +350,12 @@ function App() {
           {settings.lists.map((list) => (
             <div key={list.id} style={{border:'1px solid #ddd', borderRadius:8, padding:12}}>
               <strong>{getLookupListDisplayName(list, settings.lists)}</strong>
-              <div style={{color:'#666', fontSize:14}}>{list.sheetName} / {list.keyColumn} → {list.valueColumn}</div>
+              <div style={{color:'#666', fontSize:14}}>{list.sheetName} / 表示: {list.displayColumns.join(' → ')}</div>
+              <div style={{color:'#666', fontSize:13}}>検索: {list.searchColumns.join('、')} / コピー: {list.copyColumns.join('、') || 'なし'}</div>
               <div style={{color:'#666', fontSize:12, overflowWrap:'anywhere'}}>{list.spreadsheetUrl}</div>
               <div style={{marginTop:8}}>
                 <button disabled={busy} onClick={()=>syncList(list)}>再同期</button>{' '}
+                <button disabled={busy} onClick={()=>editList(list)}>列を編集</button>{' '}
                 <button disabled={busy} onClick={()=>removeList(list.id)}>削除</button>
               </div>
             </div>
@@ -289,13 +363,18 @@ function App() {
         </div>
       )}
 
-      <h2>Google Sheetを追加</h2>
+      <h2>{editingId ? 'リストの列を編集' : 'Google Sheetを追加'}</h2>
+      {editingId && <button disabled={busy} onClick={() => {
+        setEditingId(null); setInspection(null); setDraftUrl(''); setSheetName('');
+      }}>編集をやめる</button>}
       <p><label>Google Sheet URL<br/><input placeholder="https://docs.google.com/spreadsheets/d/..." style={{width:'100%', padding:8}} value={draftUrl} onChange={(e)=>{
         setDraftUrl(e.target.value);
         setInspection(null);
         setSheetName('');
-        setKeyColumn('');
-        setValueColumn('');
+        setSearchColumns([]);
+        setDisplayColumns([]);
+        setCopyColumns([]);
+        setEditingId(null);
       }}/></label></p>
       <button disabled={busy || !draftUrl} onClick={inspectSheet}>{busy ? '処理中...' : 'Sheetを確認'}</button>{' '}
       {DEMO_ENABLED && settings.lists.length === 0 && <button disabled={busy} onClick={useDemo}>デモで試す</button>}
@@ -310,20 +389,29 @@ function App() {
                 {inspection.sheets.map((sheet)=><option key={sheet.name} value={sheet.name}>{sheetLabel(sheet)}</option>)}
               </select>
             </label>
-            <label style={fieldStyle}>
-              <span>Key列</span>
-              <select style={selectStyle} value={keyColumn} onChange={(e)=>setKeyColumn(e.target.value)}>
-                {headers.map((header)=><option key={header} value={header}>{header}</option>)}
-              </select>
-            </label>
-            <label style={fieldStyle}>
-              <span>Value列</span>
-              <select style={selectStyle} value={valueColumn} onChange={(e)=>setValueColumn(e.target.value)}>
-                {headers.map((header)=><option key={header} value={header}>{header}</option>)}
-              </select>
-            </label>
           </div>
-          <button style={{marginTop:18}} disabled={busy || !keyColumn || !valueColumn} onClick={addList}>登録して同期</button>
+          <p>列ごとに検索・表示・コピーを選択してください。表示は上下ボタンで並べ替えられます。</p>
+          <div style={{overflowX:'auto'}}>
+            <table style={{width:'100%', borderCollapse:'collapse'}}>
+              <thead><tr><th style={{textAlign:'left'}}>列名</th><th>検索</th><th>表示</th><th>コピー</th><th>表示順</th></tr></thead>
+              <tbody>{headers.map((header) => {
+                const position = displayColumns.indexOf(header);
+                return <tr key={header} style={{borderTop:'1px solid #ddd'}}>
+                  <th scope="row" style={{textAlign:'left', overflowWrap:'anywhere'}}>{header}</th>
+                  <td style={{textAlign:'center'}}><input aria-label={`${header}を検索`} type="checkbox" checked={searchColumns.includes(header)} onChange={()=>toggleColumn(header, 'search')} /></td>
+                  <td style={{textAlign:'center'}}><input aria-label={`${header}を表示`} type="checkbox" checked={position >= 0} onChange={()=>toggleColumn(header, 'display')} /></td>
+                  <td style={{textAlign:'center'}}><input aria-label={`${header}をコピー`} type="checkbox" disabled={position < 0} checked={copyColumns.includes(header)} onChange={()=>toggleColumn(header, 'copy')} /></td>
+                  <td style={{textAlign:'center', whiteSpace:'nowrap'}}>{position >= 0 && <>
+                    {position + 1}{' '}
+                    <button aria-label={`${header}を上へ`} disabled={position === 0} onClick={()=>moveDisplayColumn(header, -1)}>↑</button>{' '}
+                    <button aria-label={`${header}を下へ`} disabled={position === displayColumns.length - 1} onClick={()=>moveDisplayColumn(header, 1)}>↓</button>
+                  </>}</td>
+                </tr>;
+              })}</tbody>
+            </table>
+          </div>
+          <p style={{fontSize:13}}>表示順: {displayColumns.join(' → ') || '未選択'}</p>
+          <button style={{marginTop:18}} disabled={busy || searchColumns.length === 0 || displayColumns.length === 0} onClick={addList}>{editingId ? '設定を保存して同期' : '登録して同期'}</button>
         </section>
       )}
 

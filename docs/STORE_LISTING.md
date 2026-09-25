@@ -12,7 +12,7 @@ LookupBox
 
 ## Single purpose
 
-LookupBox lets a user register reference lists backed by Google Sheets, synchronize the selected key/value columns into local browser storage, search those cached lists from a browser popup, and copy values with one click.
+LookupBox lets a user register reference lists backed by Google Sheets, synchronize selected search/display/copy columns into local browser storage, search those cached lists from a browser popup, and copy values with one click.
 
 LookupBox does not edit Google Sheets and does not modify web pages.
 
@@ -20,13 +20,13 @@ LookupBox does not edit Google Sheets and does not modify web pages.
 
 LookupBox は、Google Sheets に置いた参照リストをブラウザからすばやく検索・コピーするための拡張機能です。
 
-Google アカウントに接続し、利用したい Spreadsheet / Sheet / Key列 / Value列を登録すると、LookupBox が必要なデータをブラウザ内に同期します。以後はポップアップからインクリメンタル検索し、必要な値をワンクリックでコピーできます。
+Google アカウントに接続し、利用したい Spreadsheet / Sheet と検索・表示・コピー列を登録すると、LookupBox が必要なデータをブラウザ内に同期します。以後はポップアップからインクリメンタル検索し、必要な値をワンクリックでコピーできます。
 
 主な機能:
 
 - 複数の Google Sheet リストを登録
 - Spreadsheet名からリスト名を自動生成
-- Key / Value の双方から検索
+- 任意数の検索列・表示列・コピー列を設定
 - 全リスト横断検索またはリスト切り替え
 - ワンクリックコピー
 - 手動再同期
@@ -74,7 +74,7 @@ If AMO requests source code because the distributed bundle is minified, submit t
 
 1. Popup with a short search and two matching fields.
 2. Settings page showing Google connection + registered list.
-3. Sheet inspection with Sheet / Key / Value selectors.
+3. Sheet inspection with search/display/copy column settings.
 4. Multiple registered lists and all-lists search.
 
 Use only public sample data in screenshots.

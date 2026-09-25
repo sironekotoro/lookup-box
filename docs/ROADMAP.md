@@ -15,6 +15,8 @@
 
 - [x] Register multiple list configurations
 - [x] Choose Sheet, key column, and value column
+- [x] Configure any number of search, display, and copy columns per list (Issue #13)
+- [x] Edit registered list columns and preserve existing list IDs during migration
 - [x] Auto-name from Spreadsheet title
 - [x] Disambiguate duplicate title with `/ Sheet name`
 - [x] Further disambiguate same Sheet with key/value columns
