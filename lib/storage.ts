@@ -17,8 +17,10 @@ export interface LookupSettings {
 }
 
 export class InvalidLookupSettingsError extends Error {
-  constructor(public readonly invalidCount: number) {
-    super(`保存済みリストのうち${invalidCount}件を読み取れません。設定は変更せずに保持しました。`);
+  constructor(public readonly invalidCount: number, invalidShape = false) {
+    super(invalidShape
+      ? '保存済みのリスト設定の形式を読み取れません。設定は変更せずに保持しました。'
+      : `保存済みリストのうち${invalidCount}件を読み取れません。設定は変更せずに保持しました。`);
   }
 }
 
@@ -169,10 +171,12 @@ export async function loadSettings(): Promise<LookupSettings> {
     CACHE_KEY
   ]);
   const current = result[SETTINGS_KEY];
-  if (current) {
+  if (Object.hasOwn(result, SETTINGS_KEY)) {
+    if (!current || typeof current !== 'object' || !Array.isArray((current as LookupSettings).lists)) {
+      throw new InvalidLookupSettingsError(0, true);
+    }
     const normalized = normalizeSettings(current);
-    if (Array.isArray((current as LookupSettings).lists)
-      && normalized.lists.length !== (current as LookupSettings).lists.length) {
+    if (normalized.lists.length !== (current as LookupSettings).lists.length) {
       throw new InvalidLookupSettingsError((current as LookupSettings).lists.length - normalized.lists.length);
     }
     if (JSON.stringify(current) !== JSON.stringify(normalized)) await saveSettings(normalized);
@@ -201,9 +205,10 @@ export async function loadSettings(): Promise<LookupSettings> {
 export async function recoverInvalidSettings(): Promise<LookupSettings> {
   const stored = await browser.storage.local.get([SETTINGS_KEY, INVALID_SETTINGS_BACKUP_KEY]);
   const raw = stored[SETTINGS_KEY];
-  if (!raw || !Array.isArray((raw as LookupSettings).lists)) throw new Error('復旧する設定が見つかりません。');
-  const normalized = normalizeSettings(raw);
-  if (normalized.lists.length === (raw as LookupSettings).lists.length) return loadSettings();
+  if (!Object.hasOwn(stored, SETTINGS_KEY)) throw new Error('復旧する設定が見つかりません。');
+  const validListArray = !!raw && typeof raw === 'object' && Array.isArray((raw as LookupSettings).lists);
+  const normalized = validListArray ? normalizeSettings(raw) : { lists: [] };
+  if (validListArray && normalized.lists.length === (raw as LookupSettings).lists.length) return loadSettings();
   // Keep the first damaged version so repeated recovery cannot overwrite the backup.
   if (stored[INVALID_SETTINGS_BACKUP_KEY] === undefined) {
     await browser.storage.local.set({ [INVALID_SETTINGS_BACKUP_KEY]: raw });
@@ -214,7 +219,7 @@ export async function recoverInvalidSettings(): Promise<LookupSettings> {
 
 export async function loadInvalidSettingsBackup(): Promise<unknown> {
   const stored = await browser.storage.local.get([SETTINGS_KEY, INVALID_SETTINGS_BACKUP_KEY]);
-  return stored[SETTINGS_KEY] ?? stored[INVALID_SETTINGS_BACKUP_KEY];
+  return Object.hasOwn(stored, SETTINGS_KEY) ? stored[SETTINGS_KEY] : stored[INVALID_SETTINGS_BACKUP_KEY];
 }
 
 export async function saveSettings(settings: LookupSettings): Promise<void> {

@@ -147,6 +147,45 @@ describe('settings migration', () => {
     expect(set).not.toHaveBeenCalled();
   });
 
+  it.each([{ lists: 'broken' }, {}])('does not migrate malformed v4 settings: %j', async (original) => {
+    const set = vi.fn();
+    const remove = vi.fn();
+    vi.stubGlobal('browser', { storage: { local: {
+      async get() { return { 'lookup.settings.v4': original }; }, set, remove
+    } } });
+    await expect(loadSettings()).rejects.toBeInstanceOf(InvalidLookupSettingsError);
+    expect(set).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it('only migrates legacy settings when the v4 key is absent', async () => {
+    const saved: Record<string, unknown> = { 'lookup.settings.v3': { useMock: true } };
+    const set = vi.fn(async (update: Record<string, unknown>) => Object.assign(saved, update));
+    vi.stubGlobal('browser', { storage: { local: {
+      async get(keys: string[]) {
+        return Object.fromEntries(keys.filter((key) => Object.hasOwn(saved, key)).map((key) => [key, saved[key]]));
+      }, set, async remove() {}
+    } } });
+    expect((await loadSettings()).lists).toEqual([]);
+    expect(set).toHaveBeenCalledOnce();
+  });
+
+  it('backs up malformed v4 settings before explicitly resetting their list structure', async () => {
+    const original = { lists: 'broken' };
+    const saved: Record<string, unknown> = { 'lookup.settings.v4': original };
+    vi.stubGlobal('browser', { storage: { local: {
+      async get(keys: string[]) {
+        return Object.fromEntries(keys.filter((key) => Object.hasOwn(saved, key)).map((key) => [key, saved[key]]));
+      },
+      async set(update: Record<string, unknown>) { Object.assign(saved, update); },
+      async remove() {}
+    } } });
+    await expect(loadSettings()).rejects.toBeInstanceOf(InvalidLookupSettingsError);
+    expect((await recoverInvalidSettings()).lists).toEqual([]);
+    expect(saved['lookup.settings.v4.invalid']).toEqual(original);
+    expect((await loadSettings()).lists).toEqual([]);
+  });
+
   it('backs up unreadable lists before explicitly recovering valid lists', async () => {
     const valid = {
       id: 'good', spreadsheetId: 'id', spreadsheetUrl: 'url',
