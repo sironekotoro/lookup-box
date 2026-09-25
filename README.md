@@ -56,7 +56,7 @@ The extension currently requests the read-only Sheets scope:
 
 Normal users install LookupBox, click **Googleに接続**, paste a Google Sheet URL, and register the list. No GAS URL or API Token is present in the standard build.
 
-Public distribution hardening is in progress. The current broad read-only Sheets scope and Firefox development auth bridge are not treated as the final public-store authorization design; see `docs/PUBLIC_DISTRIBUTION.md` and Issue #11.
+Public distribution hardening is in progress. The read-only Sheets scope is the chosen public scope and requires Google OAuth sensitive-scope verification. The Firefox development auth bridge still needs a production replacement; see `docs/PUBLIC_DISTRIBUTION.md`.
 
 See `docs/OAUTH_SETUP.md` for the development Google Cloud setup.
 

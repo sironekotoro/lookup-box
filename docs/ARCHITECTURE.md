@@ -77,6 +77,6 @@ CI unpacks both browser package ZIPs and rejects a build if it contains the prev
 
 ## Public-distribution direction
 
-The initial direct OAuth implementation uses `spreadsheets.readonly`, which Google classifies as a sensitive scope. This is appropriate for controlled development/testing, but public distribution requires OAuth verification or a narrower permission model.
+The public-release design retains `spreadsheets.readonly` so Google does not grant LookupBox permission to edit Sheets. Google classifies this as a sensitive scope and public distribution requires OAuth verification. The consent screen grants read access to all Google Sheets available to the account, while LookupBox inspects user-entered URLs and synchronizes only registered lists.
 
-The public-release milestone should evaluate Google Picker + `drive.file` or another least-privilege design while preserving the current list model and UI.
+`drive.file` would limit access to picked files but would also grant edit/create/delete permission for those files. Issue #11 records why LookupBox's read-only product promise takes priority over per-file scope.

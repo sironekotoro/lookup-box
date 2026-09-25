@@ -13,7 +13,8 @@ Use this checklist for a Chrome Web Store or Firefox Add-ons release candidate.
 ## OAuth / Google API
 
 - [ ] Public OAuth flow is the approved production design, not the development bridge.
-- [ ] Requested Google scope is the minimum needed for the released behavior.
+- [ ] Requested Google scope is `spreadsheets.readonly` and sensitive-scope verification is complete.
+- [ ] Consent, extension UI, privacy policy, and store listing explain the full Google read scope and registered-list-only retrieval.
 - [ ] Chrome production extension ID matches its Google OAuth client configuration.
 - [ ] Firefox production redirect/client configuration matches the packaged extension.
 - [ ] Google APIs required by the final flow are enabled in the production Cloud project.
