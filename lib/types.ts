@@ -38,6 +38,7 @@ export interface LookupList {
 export interface SheetInspection {
   name: string;
   headers: string[];
+  duplicateHeaders?: string[];
   rowCount?: number;
 }
 

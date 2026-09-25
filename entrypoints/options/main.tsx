@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { LookupList, SpreadsheetInspection } from '../../lib/types';
+import { selectableHeaders } from '../../lib/sheetHeaders';
 import {
   activeLookupBundles,
   applyLookupListDisplayNames,
@@ -80,7 +81,7 @@ function App() {
   function chooseSheet(nextSheetName: string, currentInspection = inspection) {
     setSheetName(nextSheetName);
     const sheet = currentInspection?.sheets.find((candidate) => candidate.name === nextSheetName);
-    const headers = sheet?.headers.filter(Boolean) ?? [];
+    const headers = selectableHeaders(sheet);
     const defaults = headers.slice(0, 2);
     setSearchColumns(defaults);
     setDisplayColumns(defaults);
@@ -119,14 +120,19 @@ function App() {
       const result = await makeGoogleSourceProvider().inspect(list.spreadsheetUrl);
       const sheet = result.sheets.find((candidate) => candidate.name === list.sheetName);
       if (!sheet) throw new Error(`タブ「${list.sheetName}」が見つかりません。`);
+      const available = new Set(selectableHeaders(sheet));
+      const unavailableSelected = [...list.searchColumns, ...list.displayColumns, ...list.copyColumns]
+        .some((column) => !available.has(column));
       setDraftUrl(list.spreadsheetUrl);
       setInspection(result);
       setSheetName(list.sheetName);
-      setSearchColumns(list.searchColumns);
-      setDisplayColumns(list.displayColumns);
-      setCopyColumns(list.copyColumns);
+      setSearchColumns(list.searchColumns.filter((column) => available.has(column)));
+      setDisplayColumns(list.displayColumns.filter((column) => available.has(column)));
+      setCopyColumns(list.copyColumns.filter((column) => available.has(column)));
       setEditingId(list.id);
-      setMessage('列を変更して「設定を保存して同期」を押してください。');
+      setMessage(unavailableSelected
+        ? '使用中の列に重複または削除された見出しがあります。別の列を選び、設定を保存して同期してください。元の設定は保存するまで変更されません。'
+        : '列を変更して「設定を保存して同期」を押してください。');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     } finally {
@@ -232,7 +238,7 @@ function App() {
       return;
     }
 
-    const headers = selectedSheet.headers.filter(Boolean);
+    const headers = selectableHeaders(selectedSheet);
     if ([...searchColumns, ...displayColumns, ...copyColumns].some((column) => !headers.includes(column))) {
       setMessage('選択した列がSheetにありません。列を確認してください。');
       return;
@@ -328,7 +334,7 @@ function App() {
     }
   }
 
-  const headers = selectedSheet?.headers.filter(Boolean) ?? [];
+  const headers = selectableHeaders(selectedSheet);
   const fieldStyle: React.CSSProperties = { display: 'grid', gap: 6, maxWidth: 360 };
   const selectStyle: React.CSSProperties = { width: '100%', minWidth: 0, padding: '6px 8px', boxSizing: 'border-box' };
 
@@ -448,6 +454,10 @@ function App() {
             </label>
           </div>
           <p>列ごとに検索・表示・コピーを選択してください。表示は上下ボタンで並べ替えられます。</p>
+          {!!selectedSheet?.duplicateHeaders?.length && <p role="status" style={{color:'#8a5a00'}}>
+            見出しが重複している列は選択できません: {selectedSheet.duplicateHeaders.join('、')}。使う場合はSheetの1行目で名前を変更してください。
+          </p>}
+          {headers.length === 0 && <p>選べる列がありません。Sheetの1行目の見出しを確認してください。</p>}
           <div style={{overflowX:'auto'}}>
             <table style={{width:'100%', borderCollapse:'collapse'}}>
               <thead><tr><th style={{textAlign:'left'}}>列名</th><th>検索</th><th>表示</th><th>コピー</th><th>表示順</th></tr></thead>

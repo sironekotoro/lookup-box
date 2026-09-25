@@ -68,14 +68,15 @@ function validateColumns(headers: string[], required: string[], sheetName: strin
   }
 }
 
-function hasDuplicateHeaders(headers: string[], selected?: Set<string>): boolean {
+function duplicateHeaders(headers: string[], selected?: Set<string>): string[] {
   const seen = new Set<string>();
+  const duplicates = new Set<string>();
   for (const header of headers) {
     if (!header || (selected && !selected.has(header))) continue;
-    if (seen.has(header)) return true;
+    if (seen.has(header)) duplicates.add(header);
     seen.add(header);
   }
-  return false;
+  return [...duplicates];
 }
 
 function rowsFromValues(headers: string[], values: string[][], selected: Set<string>): Record<string, string>[] {
@@ -112,7 +113,6 @@ export class GoogleSheetsApiProvider implements LookupProvider {
       .filter((properties): properties is SheetProperties => Boolean(properties?.title) && properties?.hidden !== true);
 
     const inspections: SheetInspection[] = [];
-    let duplicateTabs = 0;
     if (visibleSheets.length > 0) {
       const batchUrl = new URL(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values:batchGet`);
       for (const sheet of visibleSheets) {
@@ -125,15 +125,12 @@ export class GoogleSheetsApiProvider implements LookupProvider {
       const ranges = batch.valueRanges ?? [];
       visibleSheets.forEach((sheet, index) => {
         const headers = stringRows(ranges[index]?.values)[0] ?? [];
-        if (hasDuplicateHeaders(headers)) duplicateTabs += 1;
-        else if (headers.some((header) => header.trim() !== '')) {
-          inspections.push({ name: sheet.title!, headers });
+        if (headers.some((header) => header.trim() !== '')) {
+          const duplicates = duplicateHeaders(headers);
+          inspections.push({ name: sheet.title!, headers,
+            ...(duplicates.length ? { duplicateHeaders: duplicates } : {}) });
         }
       });
-    }
-
-    if (inspections.length === 0 && duplicateTabs > 0) {
-      throw new Error('使用できるタブがありません。1行目の見出しが重複しているタブを確認してください。');
     }
 
     return {
@@ -169,7 +166,7 @@ export class GoogleSheetsApiProvider implements LookupProvider {
     const displayColumns = columnsOrDefault(this.simpleOptions.displayColumns, headers);
     const copyColumns = columnsOrDefault(this.simpleOptions.copyColumns, headers);
     const selected = new Set([...searchColumns, ...displayColumns, ...copyColumns]);
-    if (hasDuplicateHeaders(headers, selected)) {
+    if (duplicateHeaders(headers, selected).length > 0) {
       throw new Error(`${this.simpleOptions.sheetName}: 使用する列の見出しが重複しています。1行目の見出しを変更してください。`);
     }
     validateColumns(
