@@ -21,6 +21,7 @@ LookupBox is a generic browser lookup tool for reference lists. It is not a data
 - Do not reintroduce the old gateway runtime or its host permissions into normal distribution artifacts.
 - `gas/` is historical/reference material only and must not be imported by extension runtime code.
 - Preserve room for local SQLite and CSV.
+- Keep data flow one-way: source → replaceable local cache → search/copy. Google Sheets owns its data; cached rows are derived and never written back to a source.
 - Public distribution still requires least-privilege/OAuth review.
 
 ## Security

@@ -54,6 +54,14 @@ OAuth client IDs are build-time application configuration and are not end-user s
 
 The direct provider uses Google Sheets API v4.
 
+Google Sheets is the source of truth for registered lists. `browser.storage.local`
+holds replaceable synchronized rows for local search and copy, not an
+independently editable list. Providers read sources; LookupBox never writes
+cache edits back to a Sheet. The cache update order and partial-failure
+behavior are implemented in #24 and #29 below. Future local SQLite and CSV
+providers should use the same source → cache → search/copy direction; they
+are not enabled as user-facing sources yet.
+
 Inspection flow:
 
 1. Read Spreadsheet metadata and visible Sheet titles.
