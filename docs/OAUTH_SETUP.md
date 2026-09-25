@@ -111,4 +111,4 @@ When the relevant client ID is absent, LookupBox still builds successfully but t
 
 The current settings schema is OAuth-only. When an older installation is opened, compatible lookup-list definitions and cached rows are migrated forward where possible. Old connection credentials are not retained in the current settings key, so the user reconnects with **Googleに接続**.
 
-The historical `gas/Code.gs` file is kept in the repository for reference only; it is not part of the standard browser runtime or package permissions.
+The historical GAS gateway source has been removed from the repository. It is not part of the browser runtime or package permissions.

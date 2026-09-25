@@ -19,7 +19,7 @@ LookupBox is a generic browser lookup tool for reference lists. It is not a data
 - Google Sheets is the first production source.
 - Standard Chrome/Firefox artifacts use direct Google OAuth + Sheets API only.
 - Do not reintroduce the old gateway runtime or its host permissions into normal distribution artifacts.
-- `gas/` is historical/reference material only and must not be imported by extension runtime code.
+- Do not restore or deploy the removed historical GAS gateway source.
 - Preserve room for local SQLite and CSV.
 - Keep data flow one-way: source → replaceable local cache → search/copy. Google Sheets owns its data; cached rows are derived and never written back to a source.
 - Public distribution still requires least-privilege/OAuth review.
