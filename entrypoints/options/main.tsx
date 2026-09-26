@@ -414,6 +414,7 @@ function App() {
         <h2 style={{marginTop:0}}>Google接続</h2>
         <p>現在: <strong>{connected === null ? '確認中' : connected ? '接続済み' : '未接続'}</strong></p>
         <p>Googleの許可画面では、アクセスできるすべてのGoogleスプレッドシートの読み取り権限を求めます。LookupBoxは、入力したURLのシートを確認し、登録したリストのデータを同期・保存します。スプレッドシートを変更する権限は求めません。</p>
+        <p>同期したデータの保存・削除については <a href="https://sironekotoro.github.io/lookup-box/privacy.html" target="_blank" rel="noopener noreferrer">プライバシーポリシー</a> をご覧ください。</p>
         {authInfo.configured ? (
           <div>
             <button disabled={busy} onClick={connectGoogle}>Googleに接続</button>{' '}

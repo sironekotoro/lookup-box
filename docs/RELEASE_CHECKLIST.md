@@ -16,6 +16,7 @@ Use this checklist for a Chrome Web Store or Firefox Add-ons release candidate.
 - [ ] Requested Google scope is `spreadsheets.readonly` and sensitive-scope verification is complete.
 - [ ] Consent, extension UI, privacy policy, and store listing explain the full Google read scope and registered-list-only retrieval.
 - [ ] Chrome production extension ID matches its Google OAuth client configuration.
+- [ ] Chrome ZIP passes `LOOKUPBOX_CHROME_STORE_ID=<actual ID> npm run verify:chrome-zip` using a real production client ID.
 - [ ] Firefox production redirect/client configuration matches the packaged extension.
 - [ ] Google APIs required by the final flow are enabled in the production Cloud project.
 - [ ] OAuth consent screen branding/support/privacy URLs are current.

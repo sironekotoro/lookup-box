@@ -65,6 +65,7 @@ Used when the user selects Disconnect to ask Google to revoke the current OAuth 
 - Analytics/telemetry: none in the current public candidate.
 - Advertising: none.
 - Sale of user data: none.
+- Google Workspace API data used to train generalized AI/ML models: none.
 
 ## Firefox AMO reviewer notes draft
 
