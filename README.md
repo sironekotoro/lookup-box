@@ -69,13 +69,13 @@ See `docs/OAUTH_SETUP.md` for the development Google Cloud setup.
 
 LookupBox keeps registered list definitions and synchronized rows in browser-local extension storage. Popup search terms are processed locally and are not sent to the developer or to an analytics service.
 
-Development/public-documentation privacy page:
+Privacy policy:
 
-`https://sironekotoro.github.io/lookup-box/privacy.html`
+`https://lookupbox.sironekotoro.com/privacy.html`
 
 Source: `docs/PRIVACY.md`
 
-For production Google OAuth branding/verification, the homepage and privacy policy will be served from a verified custom domain controlled by the developer. The default `github.io` project URL is not treated as the final OAuth verification domain.
+The homepage and privacy policy are served from the developer-controlled custom domain. Verify domain ownership in Google Search Console and complete Google OAuth review before public distribution.
 
 ## Versioning
 
@@ -104,13 +104,13 @@ The build remains valid when those variables are absent; OAuth is simply reporte
 
 The usage site lives in `site/` and is deployed by `.github/workflows/pages.yml`.
 
-Development/public documentation site:
+Homepage:
 
-`https://sironekotoro.github.io/lookup-box/`
+`https://lookupbox.sironekotoro.com/`
 
 Privacy policy page:
 
-`https://sironekotoro.github.io/lookup-box/privacy.html`
+`https://lookupbox.sironekotoro.com/privacy.html`
 
 ## Public distribution
 

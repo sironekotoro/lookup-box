@@ -7,26 +7,23 @@ resolved.
 
 ## 1. Production homepage and privacy policy
 
-As checked on 2026-09-25, the Pages site is
-`https://sironekotoro.github.io/lookup-box/` and GitHub Pages has no custom
-domain configured. Use a subdomain under a domain
-controlled by the publisher (proposed: `lookupbox.sironekotoro.com`):
+The homepage at `https://lookupbox.sironekotoro.com/` and privacy policy at
+`https://lookupbox.sironekotoro.com/privacy.html` are live over HTTPS.
+GitHub Pages is configured with this custom domain and **Enforce HTTPS**.
+The DNS `CNAME` points to `sironekotoro.github.io` (without `/lookup-box`).
+For a new custom subdomain, configure **Repository Settings → Pages → Custom
+domain** before adding the DNS record, to prevent subdomain takeover.
+This site deploys with a GitHub Actions workflow, so a `site/CNAME` file alone
+does not configure the domain.
 
-1. Create a DNS `CNAME` from the chosen subdomain to `sironekotoro.github.io`
-   (without `/lookup-box`). Do not change an existing DNS record for another
-   service.
-2. Set that same hostname under **Repository Settings → Pages → Custom domain**.
-   This site deploys with a GitHub Actions workflow, so adding a `site/CNAME`
-   file alone does not configure the domain.
-3. Check the final homepage and `/privacy.html` over HTTPS, and turn on
-   **Enforce HTTPS** when GitHub Pages makes it available.
-4. Verify ownership of the domain in Google Search Console with a project
+Remaining steps:
+
+1. Verify ownership of the domain in Google Search Console with a project
    owner/editor of the production Google Cloud project. Use the exact final
    homepage and privacy URLs in Google Auth Platform. The privacy page must
    remain a separate HTML page linked from the homepage.
-5. Once the custom domain resolves, update the options-page privacy link and
-   repository/Store URLs to the final canonical address. Do not enter the
-   proposed URL in Google Auth Platform before it actually resolves.
+2. Confirm the Google Auth Platform and Chrome Web Store URLs use the final
+   canonical address. Update the Store listing before submission.
 
 ## 2. Chrome identity and release ZIP
 
