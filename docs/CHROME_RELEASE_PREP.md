@@ -7,52 +7,54 @@ resolved.
 
 ## 1. Production homepage and privacy policy
 
-As checked on 2026-09-25, the Pages site is
-`https://sironekotoro.github.io/lookup-box/` and GitHub Pages has no custom
-domain configured. Use a subdomain under a domain
-controlled by the publisher (proposed: `lookupbox.sironekotoro.com`):
+The homepage at `https://lookupbox.sironekotoro.com/` and privacy policy at
+`https://lookupbox.sironekotoro.com/privacy.html` are live over HTTPS.
+GitHub Pages is configured with this custom domain and **Enforce HTTPS**.
+The DNS `CNAME` points to `sironekotoro.github.io` (without `/lookup-box`).
+For a new custom subdomain, configure **Repository Settings → Pages → Custom
+domain** before adding the DNS record, to prevent subdomain takeover.
+This site deploys with a GitHub Actions workflow, so a `site/CNAME` file alone
+does not configure the domain.
 
-1. Create a DNS `CNAME` from the chosen subdomain to `sironekotoro.github.io`
-   (without `/lookup-box`). Do not change an existing DNS record for another
-   service.
-2. Set that same hostname under **Repository Settings → Pages → Custom domain**.
-   This site deploys with a GitHub Actions workflow, so adding a `site/CNAME`
-   file alone does not configure the domain.
-3. Check the final homepage and `/privacy.html` over HTTPS, and turn on
-   **Enforce HTTPS** when GitHub Pages makes it available.
-4. Verify ownership of the domain in Google Search Console with a project
+Remaining steps:
+
+1. Verify ownership of the domain in Google Search Console with a project
    owner/editor of the production Google Cloud project. Use the exact final
    homepage and privacy URLs in Google Auth Platform. The privacy page must
    remain a separate HTML page linked from the homepage.
-5. Once the custom domain resolves, update the options-page privacy link and
-   repository/Store URLs to the final canonical address. Do not enter the
-   proposed URL in Google Auth Platform before it actually resolves.
+2. Confirm the Google Auth Platform and Chrome Web Store URLs use the final
+   canonical address. Update the Store listing before submission.
 
 ## 2. Chrome identity and release ZIP
 
-The current manifest key produces the development extension ID
-`fknnikkfcolngfdemfoimajmbjdpkjbp`. Create a Chrome Web Store draft item
-without publishing it; compare its assigned item ID with that value. Do not
-assume they match. Configure a **Chrome Extension** Google OAuth client for the
-actual Store ID. If the assigned ID differs, update the manifest identity
-strategy and OAuth client before submitting. Preserve existing installations
-when choosing the migration path.
+The development manifest key produces extension ID
+`fknnikkfcolngfdemfoimajmbjdpkjbp`. The Chrome Web Store draft created on
+2026-09-26 has item ID `aplbknmobllopblceapancjecklfanni`. The Store rejects
+ZIPs containing a manifest `key`, so the Store build omits it. Configure a
+separate **Chrome Extension** Google OAuth client for the actual Store ID.
+The development ID and its installed copies remain separate; do not assume
+an existing unpacked installation changes its ID after Store publication.
 
-Build the exact candidate with `WXT_GOOGLE_CHROME_CLIENT_ID` configured,
-then run:
+Build the development candidate with `WXT_GOOGLE_CHROME_CLIENT_ID` configured,
+and the Store candidate with the **production** client configured separately:
 
 ```bash
 npm ci
 npm run zip:chrome
-LOOKUPBOX_CHROME_STORE_ID=<actual-store-item-id> npm run verify:chrome-zip
+npm run verify:chrome-zip
+WXT_GOOGLE_CHROME_STORE_CLIENT_ID=<production-client-id> npm run zip:chrome:store
+WXT_GOOGLE_CHROME_STORE_CLIENT_ID=<production-client-id> npm run verify:chrome-store-zip
 ```
 
-The ZIP check verifies the packaged manifest, client ID shape, read-only
-scope, required permissions, and ID derived from its public key. It cannot
-prove the client ID is registered to the Google Cloud project or that Google
-has verified the application. CI runs the same manifest check when its Chrome
-client ID repository variable is configured; without that variable it still
-builds a development package, but it must not be submitted to the Store.
+The development ZIP check verifies its fixed key and development ID. The
+Store ZIP check verifies that no key is included, the configured production
+OAuth client ID is packaged, and the scope and permissions are correct. A
+key-free ZIP cannot prove its assigned Store ID locally; check the actual
+draft in the Developer Dashboard and the client registration in Google Cloud.
+CI generates the Store ZIP only when repository variable
+`WXT_GOOGLE_CHROME_STORE_CLIENT_ID` is set. Never submit the development ZIP
+to the Store. Do not submit the current draft's test ZIP, which contains the
+development OAuth client ID.
 No client secret belongs in the extension or repository variables.
 
 ## 3. Google OAuth sensitive-scope review

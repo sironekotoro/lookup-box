@@ -36,4 +36,4 @@ Then run **Deploy GitHub Pages** manually or push a change under `site/`.
 
 Expected URL:
 
-`https://sironekotoro.github.io/lookup-box/`
+`https://lookupbox.sironekotoro.com/`
