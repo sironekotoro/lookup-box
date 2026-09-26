@@ -11,10 +11,12 @@
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:chrome": "wxt zip -b chrome",
+    "zip:chrome:store": "WXT_CHROME_STORE_BUILD=true wxt zip -b chrome",
     "zip:firefox": "wxt zip -b firefox",
     "typecheck": "tsc --noEmit",
     "complexity": "node scripts/complexity.mjs",
     "verify:chrome-zip": "node scripts/verify-chrome-zip.mjs",
+    "verify:chrome-store-zip": "node scripts/verify-chrome-zip.mjs --store",
     "test": "vitest run",
     "check": "npm run typecheck && npm test",
     "postinstall": "wxt prepare"

@@ -3,8 +3,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
 const releaseDir = '.output';
+const storeBuild = process.argv.includes('--store');
 const builtManifest = JSON.parse(readFileSync(`${releaseDir}/chrome-mv3/manifest.json`, 'utf8'));
-const zipPath = `${releaseDir}/lookup-box-${builtManifest.version}-chrome.zip`;
+const zipPath = `${releaseDir}/lookup-box-${builtManifest.version}-chrome${storeBuild ? '-store' : ''}.zip`;
 if (!existsSync(zipPath)) throw new Error(`Missing Chrome ZIP for build ${builtManifest.version}: ${zipPath}`);
 const extracted = spawnSync('unzip', ['-p', zipPath, 'manifest.json'], { encoding: 'utf8' });
 if (extracted.status !== 0) throw new Error(`Cannot read packaged manifest: ${extracted.stderr}`);
@@ -19,10 +20,19 @@ function extensionId(publicKey) {
   return hex.replace(/[0-9a-f]/g, (digit) => String.fromCharCode(parseInt(digit, 16) + 97));
 }
 
-const expectedId = process.env.LOOKUPBOX_CHROME_STORE_ID || 'fknnikkfcolngfdemfoimajmbjdpkjbp';
-const actualId = extensionId(manifest.key);
-if (actualId !== expectedId) {
-  throw new Error(`Chrome ID mismatch: ZIP key produces ${actualId}, expected ${expectedId}`);
+if (storeBuild) {
+  if (Object.hasOwn(manifest, 'key')) throw new Error('Chrome Web Store rejects manifest key');
+  if (!process.env.WXT_GOOGLE_CHROME_STORE_CLIENT_ID) {
+    throw new Error('Production Chrome Store OAuth client ID must be configured');
+  }
+  if (manifest.oauth2?.client_id !== process.env.WXT_GOOGLE_CHROME_STORE_CLIENT_ID) {
+    throw new Error('Store ZIP OAuth client differs from the configured production client');
+  }
+} else {
+  const actualId = extensionId(manifest.key);
+  if (actualId !== 'fknnikkfcolngfdemfoimajmbjdpkjbp') {
+    throw new Error(`Development Chrome ID mismatch: ZIP key produces ${actualId}`);
+  }
 }
 if (manifest.manifest_version !== 3) throw new Error('Chrome package must use Manifest V3');
 if (!/^[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/.test(manifest.oauth2?.client_id ?? '')) {
@@ -39,7 +49,5 @@ for (const [label, actual, expected] of [
     throw new Error(`Unexpected Chrome ${label}: ${JSON.stringify(actual)}`);
   }
 }
-console.log(`Chrome ZIP OAuth manifest verified: ${zipPath}; extension ID ${actualId}`);
-if (!process.env.LOOKUPBOX_CHROME_STORE_ID) {
-  console.log('Compared against development ID only. Set LOOKUPBOX_CHROME_STORE_ID to check the actual Web Store item before release.');
-}
+console.log(`Chrome ${storeBuild ? 'Store' : 'development'} ZIP OAuth manifest verified: ${zipPath}`);
+if (storeBuild) console.log('Verify the production OAuth client is registered to Store item aplbknmobllopblceapancjecklfanni in Google Cloud. A key-free ZIP cannot prove its Store ID locally.');
