@@ -1,6 +1,6 @@
 # LookupBox Privacy Policy
 
-Last updated: 2026-09-25
+Last updated: 2026-09-28
 
 LookupBox is a browser extension for searching and copying values from reference lists stored in Google Sheets.
 
@@ -13,6 +13,8 @@ LookupBox requests the Google Sheets read-only scope:
 `https://www.googleapis.com/auth/spreadsheets.readonly`
 
 Google grants read access to all Google Sheets that the signed-in account can access. LookupBox inspects only URLs the user enters and stores rows only for lists the user registers and synchronizes. This scope does not grant permission to modify Google Sheets.
+
+LookupBox deliberately uses this read-only OAuth scope so that Google APIs reject write and delete requests made with its access token. A file-specific scope such as `drive.file` would limit which files the app can access, but would also grant the app permission to edit or delete those selected files. Omitting write features from the extension would not remove those permissions from the token. LookupBox therefore requests read-only access at the API authorization level; it never writes changes back to Google Sheets.
 
 ## Local storage
 
@@ -27,6 +29,8 @@ LookupBox stores the following information in the browser's local extension stor
 Registered list settings remain until the user removes a list, clears extension storage, or uninstalls the extension. Disconnecting Google deletes the locally cached rows and synchronization metadata, while retaining list settings for a future connection.
 
 Browser extension storage is isolated from ordinary web pages, and LookupBox does not send the stored rows to a developer-operated server. The rows are kept on the user's device; someone with access to that device or browser profile may be able to view locally stored data. LookupBox does not claim that the local cache is encrypted. Users can remove a list in settings, disconnect Google to clear cached rows, or clear the extension's storage/uninstall the extension to remove remaining settings.
+
+These are the protections for Sheet data: access is limited to browser extension storage rather than ordinary web pages; only data for registered lists is cached; search is performed locally; no Sheet contents are sent to the developer's server, analytics, or advertising services; and disconnecting removes the cached rows. Device and browser-profile access remain risks, so users should secure their device and browser profile, especially on shared computers.
 
 ## Search terms
 
