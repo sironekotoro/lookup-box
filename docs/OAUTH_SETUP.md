@@ -58,7 +58,13 @@ gh variable set WXT_GOOGLE_CHROME_CLIENT_ID \
 
 The OAuth client ID is an application identifier, not a secret. Do not add a client secret.
 
-Before Chrome Web Store publication, verify that the production Web Store identity matches the OAuth client strategy. If the store identity changes, create a production OAuth client for that production ID.
+The Chrome Web Store draft has a different item ID:
+`aplbknmobllopblceapancjecklfanni`. Create a **second Chrome Extension**
+OAuth client with that Item ID in the production Google Cloud project. Save its
+client ID as repository variable `WXT_GOOGLE_CHROME_STORE_CLIENT_ID` when ready.
+`npm run zip:chrome:store` then generates a separate Store ZIP without the
+development manifest `key`. Keep the development client and Store client
+distinct; never submit the development ZIP to the Web Store.
 
 ## Firefox development bridge
 

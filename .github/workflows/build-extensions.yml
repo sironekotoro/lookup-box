@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 15
     env:
       WXT_GOOGLE_CHROME_CLIENT_ID: ${{ vars.WXT_GOOGLE_CHROME_CLIENT_ID }}
+      WXT_GOOGLE_CHROME_STORE_CLIENT_ID: ${{ vars.WXT_GOOGLE_CHROME_STORE_CLIENT_ID }}
       WXT_GOOGLE_FIREFOX_CLIENT_ID: ${{ vars.WXT_GOOGLE_FIREFOX_CLIENT_ID }}
     steps:
       - name: Checkout
@@ -51,6 +52,14 @@ jobs:
       - name: Verify configured Chrome OAuth ZIP
         if: env.WXT_GOOGLE_CHROME_CLIENT_ID != ''
         run: npm run verify:chrome-zip
+
+      - name: Build Chrome Web Store package
+        if: env.WXT_GOOGLE_CHROME_STORE_CLIENT_ID != ''
+        run: npm run zip:chrome:store
+
+      - name: Verify Chrome Web Store package
+        if: env.WXT_GOOGLE_CHROME_STORE_CLIENT_ID != ''
+        run: npm run verify:chrome-store-zip
 
       - name: Verify OAuth-only artifacts
         shell: bash
